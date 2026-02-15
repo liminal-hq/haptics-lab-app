@@ -47,7 +47,9 @@ jobs:
           pnpm install
 
       - name: Build Android
-        run: pnpm android:build
+        run: |
+          pnpm android:init
+          pnpm android:build
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
