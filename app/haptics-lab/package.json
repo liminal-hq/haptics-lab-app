@@ -1,5 +1,5 @@
 {
-  "name": "apphaptics-lab",
+  "name": "haptics-lab",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -14,7 +14,7 @@
     "react-dom": "^19.1.0",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-opener": "^2",
-    "@liminal-hq/plugin-material-you": "^0.0.0",
+    "@liminal-hq/plugin-material-you": "^0.1.2",
     "@liminal-hq/plugin-haptics": "workspace:*",
     "@mui/material": "^6.0.0",
     "@emotion/react": "^11.0.0",
