@@ -3,37 +3,37 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Config {
-  pub default_usage: Option<String>,
-  pub respect_system_haptics_setting: Option<bool>,
-  pub stop_before_play: Option<bool>,
-  pub max_duration_ms: Option<u64>,
-  pub max_amplitude: Option<u8>,
-  pub allow_repeating_waveforms: Option<bool>,
+    pub default_usage: Option<String>,
+    pub respect_system_haptics_setting: Option<bool>,
+    pub stop_before_play: Option<bool>,
+    pub max_duration_ms: Option<u64>,
+    pub max_amplitude: Option<u8>,
+    pub allow_repeating_waveforms: Option<bool>,
 
-  #[serde(default)]
-  pub android: AndroidConfig,
+    #[serde(default)]
+    pub android: AndroidConfig,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AndroidConfig {
-  pub foreground_audio_usage: Option<String>,
-  pub background_audio_usage: Option<String>,
+    pub foreground_audio_usage: Option<String>,
+    pub background_audio_usage: Option<String>,
 }
 
 impl Default for Config {
-  fn default() -> Self {
-    Self {
-      default_usage: Some("touch".into()),
-      respect_system_haptics_setting: Some(true),
-      stop_before_play: Some(true),
-      max_duration_ms: Some(10_000),
-      max_amplitude: Some(255),
-      allow_repeating_waveforms: Some(false),
-      android: AndroidConfig {
-        foreground_audio_usage: Some("USAGE_ASSISTANCE_SONIFICATION".into()),
-        background_audio_usage: Some("USAGE_ALARM".into()),
-      },
+    fn default() -> Self {
+        Self {
+            default_usage: Some("touch".into()),
+            respect_system_haptics_setting: Some(true),
+            stop_before_play: Some(true),
+            max_duration_ms: Some(10_000),
+            max_amplitude: Some(255),
+            allow_repeating_waveforms: Some(false),
+            android: AndroidConfig {
+                foreground_audio_usage: Some("USAGE_ASSISTANCE_SONIFICATION".into()),
+                background_audio_usage: Some("USAGE_ALARM".into()),
+            },
+        }
     }
-  }
 }

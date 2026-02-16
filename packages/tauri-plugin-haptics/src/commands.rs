@@ -1,18 +1,21 @@
-use tauri::{command, Manager, Runtime};
+use tauri::{command, AppHandle, Runtime};
 
-use crate::{models::*, HapticsExt, Result};
+use crate::{models::*, HapticsExt};
 
 #[command]
-pub fn capabilities<R: Runtime, T: Manager<R>>(app: T) -> Result<Capabilities> {
-  app.haptics().capabilities()
+pub fn capabilities<R: Runtime>(app: AppHandle<R>) -> std::result::Result<Capabilities, String> {
+    app.haptics().capabilities().map_err(|e| e.to_string())
 }
 
 #[command]
-pub fn play<R: Runtime, T: Manager<R>>(app: T, req: EffectRequest) -> Result<PlayResult> {
-  app.haptics().play(req)
+pub fn play<R: Runtime>(
+    app: AppHandle<R>,
+    req: EffectRequest,
+) -> std::result::Result<PlayResult, String> {
+    app.haptics().play(req).map_err(|e| e.to_string())
 }
 
 #[command]
-pub fn stop<R: Runtime, T: Manager<R>>(app: T) -> Result<()> {
-  app.haptics().stop()
+pub fn stop<R: Runtime>(app: AppHandle<R>) -> std::result::Result<(), String> {
+    app.haptics().stop().map_err(|e| e.to_string())
 }
