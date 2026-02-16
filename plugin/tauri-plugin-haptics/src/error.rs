@@ -4,6 +4,8 @@ use thiserror::Error;
 pub enum Error {
     #[error("plugin error: {0}")]
     Plugin(#[from] tauri::Error),
+    #[error("mobile plugin invoke error: {0}")]
+    MobilePluginInvoke(String),
     #[error("haptics unsupported on this platform")]
     Unsupported,
     #[error("invalid request: {0}")]

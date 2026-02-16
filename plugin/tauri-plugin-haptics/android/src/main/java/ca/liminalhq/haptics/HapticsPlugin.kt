@@ -76,8 +76,9 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
     ) else false
     ret.put("compositionSupported", compositionSupported)
 
-    // envelope (API 36)
-    val envelopeSupported = if (Build.VERSION.SDK_INT >= 36) vibrator.areEnvelopeEffectsSupported() else false
+    // Envelope effects are disabled here until this plugin is built with an API
+    // level that includes stable envelope APIs on all toolchains.
+    val envelopeSupported = false
     ret.put("envelopeSupported", envelopeSupported)
 
     // system setting (optional)
@@ -85,23 +86,6 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
       Settings.System.getInt(activity.contentResolver, Settings.System.HAPTIC_FEEDBACK_ENABLED, 1) != 0
     } catch (_: Throwable) { null }
     if (enabled != null) ret.put("hapticFeedbackEnabled", enabled)
-
-    if (envelopeSupported && Build.VERSION.SDK_INT >= 36) {
-      val info = vibrator.envelopeEffectInfo
-      val env = JSObject()
-      env.put("maxSize", info.maxSize)
-      env.put("minControlPointDurationMs", info.minControlPointDurationMillis)
-      env.put("maxControlPointDurationMs", info.maxControlPointDurationMillis)
-      env.put("maxDurationMs", info.maxDurationMillis)
-
-      val fp = vibrator.frequencyProfile
-      val fpObj = JSObject()
-      fpObj.put("minHz", fp.frequencyRangeHz.lower)
-      fpObj.put("maxHz", fp.frequencyRangeHz.upper)
-      env.put("frequencyProfile", fpObj)
-
-      ret.put("envelopeInfo", env)
-    }
 
     invoke.resolve(ret)
   }
@@ -187,7 +171,7 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
       }
 
       "waveform" -> {
-        val timings = toLongArray(effectObj.getArray("timingsMs"))
+        val timings = toLongArray(getArray(effectObj, "timingsMs"))
         val repeat = if (effectObj.has("repeat")) effectObj.getInt("repeat") else -1
 
         // Enforce repeat safety
@@ -195,7 +179,7 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
         val safeRepeat = if (!allowRepeat && repeat >= 0) -1 else repeat
 
         if (effectObj.has("amplitudes")) {
-          val amps = toIntArray(effectObj.getArray("amplitudes")).map { it.coerceIn(0, maxAmp) }.toIntArray()
+          val amps = toIntArray(getArray(effectObj, "amplitudes")).map { it.coerceIn(0, maxAmp) }.toIntArray()
           val capped = capWaveformDuration(timings, maxDur)
           val eff = if (vibrator.hasAmplitudeControl()) {
             VibrationEffect.createWaveform(capped, amps, safeRepeat)
@@ -222,13 +206,13 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
           // Downgrade to a click
           Triple(VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK), true, "Composition requires API 30+")
         } else {
-          val steps = effectObj.getArray("steps")
+          val steps = getArray(effectObj, "steps")
           val comp = VibrationEffect.startComposition()
 
           for (i in 0 until steps.length()) {
-            val step = steps.getObject(i)
+            val step = getObject(steps, i)
             val kind = step.getString("kind")
-            val delay = if (step.has("delayMs")) step.getLong("delayMs") else 0L
+            val delay = if (step.has("delayMs")) step.getLong("delayMs").toInt().coerceAtLeast(0) else 0
 
             when (kind) {
               "primitive" -> {
@@ -237,8 +221,8 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
                 comp.addPrimitive(primId, scale, delay)
               }
               "effect" -> {
-                val eff = mapPredefinedEffect(step.getString("effect"))
-                comp.addEffect(VibrationEffect.createPredefined(eff), delay)
+                val primId = mapPrimitiveFromEffect(step.getString("effect"))
+                comp.addPrimitive(primId, 1f, delay)
               }
             }
           }
@@ -249,22 +233,10 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
       }
 
       "envelopeWaveform" -> {
-        if (Build.VERSION.SDK_INT < 36 || !vibrator.areEnvelopeEffectsSupported()) {
+        if (Build.VERSION.SDK_INT < 36) {
           Triple(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK), true, "Envelope requires API 36+ and device support")
         } else {
-          val builder = VibrationEffect.WaveformEnvelopeBuilder()
-          if (effectObj.has("initialFrequencyHz")) {
-            builder.setInitialFrequencyHz(effectObj.getDouble("initialFrequencyHz").toFloat())
-          }
-          val cps = effectObj.getArray("controlPoints")
-          for (i in 0 until cps.length()) {
-            val cp = cps.getObject(i)
-            val amp = cp.getDouble("amplitude").toFloat().coerceIn(0f, 1f)
-            val hz = cp.getDouble("frequencyHz").toFloat().coerceAtLeast(1f)
-            val dur = cp.getLong("durationMs").coerceAtLeast(1).coerceAtMost(maxDur)
-            builder.addControlPoint(amp, hz, dur)
-          }
-          Triple(builder.build(), false, null)
+          Triple(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK), true, "Envelope effect is temporarily disabled")
         }
       }
 
@@ -302,6 +274,17 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
     return out
   }
 
+  private fun getArray(obj: JSObject, key: String): JSArray {
+    if (!obj.has(key)) {
+      return JSArray()
+    }
+    return JSArray.from(obj.get(key)) ?: JSArray()
+  }
+
+  private fun getObject(arr: JSArray, index: Int): JSObject {
+    return JSObject.fromJSONObject(arr.getJSONObject(index))
+  }
+
   private fun audioAttributesForUsage(usage: String, cfg: PluginConfigArgs): AudioAttributes {
     val u = usage.lowercase()
 
@@ -323,10 +306,16 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
       "click" -> VibrationEffect.EFFECT_CLICK
       "double_click" -> VibrationEffect.EFFECT_DOUBLE_CLICK
       "tick" -> VibrationEffect.EFFECT_TICK
-      "thud" -> VibrationEffect.EFFECT_THUD
-      "pop" -> VibrationEffect.EFFECT_POP
       "heavy_click" -> VibrationEffect.EFFECT_HEAVY_CLICK
       else -> VibrationEffect.EFFECT_CLICK
+    }
+  }
+
+  private fun mapPrimitiveFromEffect(id: String): Int {
+    return when (id.lowercase()) {
+      "tick" -> VibrationEffect.Composition.PRIMITIVE_TICK
+      "thud" -> VibrationEffect.Composition.PRIMITIVE_THUD
+      else -> VibrationEffect.Composition.PRIMITIVE_CLICK
     }
   }
 

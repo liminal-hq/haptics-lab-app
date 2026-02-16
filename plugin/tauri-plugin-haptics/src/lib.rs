@@ -5,6 +5,7 @@ use tauri::{
 
 mod commands;
 mod config;
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 mod desktop;
 mod error;
 #[cfg(any(target_os = "android", target_os = "ios"))]
