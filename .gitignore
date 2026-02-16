@@ -1,6 +1,9 @@
 **/node_modules/
 **/dist/
+**/build/
 **/target/
+**/.gradle/
+**/*.tsbuildinfo
 .DS_Store
 *.log
 .pnpm-store
