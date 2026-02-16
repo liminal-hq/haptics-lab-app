@@ -11,7 +11,7 @@ pub struct EffectRequest {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "camelCase")]
+#[serde(tag = "type", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum Effect {
     Oneshot {
         duration_ms: u64,
@@ -43,7 +43,7 @@ pub struct EnvelopePoint {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "kind", rename_all = "camelCase")]
+#[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum CompositionStep {
     Primitive {
         primitive: String,
@@ -77,4 +77,73 @@ pub struct PlayResult {
     pub ok: bool,
     pub downgraded: Option<bool>,
     pub downgrade_reason: Option<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn serializes_predefined_with_type_tag_and_camel_case_fields() {
+        let req = EffectRequest {
+            id: None,
+            usage: Some("touch".to_string()),
+            respect_system_settings: Some(true),
+            stop_before_play: Some(true),
+            effect: Effect::Predefined {
+                effect_id: "click".to_string(),
+            },
+        };
+
+        let value = serde_json::to_value(req).expect("serialize effect request");
+        assert_eq!(value["effect"]["type"], "predefined");
+        assert_eq!(value["effect"]["effectId"], "click");
+    }
+
+    #[test]
+    fn deserializes_waveform_from_camel_case_fields() {
+        let raw = serde_json::json!({
+            "effect": {
+                "type": "waveform",
+                "timingsMs": [0, 50, 50, 100],
+                "amplitudes": [0, 128, 0, 255],
+                "repeat": -1
+            }
+        });
+
+        let req: EffectRequest = serde_json::from_value(raw).expect("deserialize effect request");
+        match req.effect {
+            Effect::Waveform {
+                timings_ms,
+                amplitudes,
+                repeat,
+            } => {
+                assert_eq!(timings_ms, vec![0, 50, 50, 100]);
+                assert_eq!(amplitudes, Some(vec![0, 128, 0, 255]));
+                assert_eq!(repeat, Some(-1));
+            }
+            _ => panic!("expected waveform effect"),
+        }
+    }
+
+    #[test]
+    fn serializes_waveform_with_expected_timings_key() {
+        let req = EffectRequest {
+            id: None,
+            usage: Some("touch".to_string()),
+            respect_system_settings: Some(true),
+            stop_before_play: Some(true),
+            effect: Effect::Waveform {
+                timings_ms: vec![0, 50, 50, 100],
+                amplitudes: Some(vec![0, 128, 0, 255]),
+                repeat: Some(-1),
+            },
+        };
+
+        let value = serde_json::to_value(req).expect("serialize waveform request");
+        assert_eq!(value["effect"]["type"], "waveform");
+        assert_eq!(value["effect"]["timingsMs"], serde_json::json!([0, 50, 50, 100]));
+        assert_eq!(value["effect"]["amplitudes"], serde_json::json!([0, 128, 0, 255]));
+        assert_eq!(value["effect"]["repeat"], -1);
+    }
 }

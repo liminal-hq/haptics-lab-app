@@ -16,6 +16,7 @@ import app.tauri.plugin.Invoke
 import app.tauri.plugin.JSArray
 import app.tauri.plugin.JSObject
 import app.tauri.plugin.Plugin
+import org.json.JSONArray
 
 @InvokeArg
 internal class AndroidConfigArgs {
@@ -98,10 +99,20 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
 
   @Command
   fun play(invoke: Invoke) {
-    val args = invoke.parseArgs(EffectRequestArgs::class.java)
+    val argsRoot = invoke.getArgs()
+    val args = argsRoot.getJSObject("req") ?: argsRoot
+    val effectObj = args.getJSObject("effect")
+    if (effectObj == null) {
+      invoke.reject("INVALID_EFFECT", "Missing effect payload")
+      return
+    }
 
     // honour system setting if configured
-    val respect = args.respectSystemSettings ?: (cfg.respectSystemHapticsSetting ?: true)
+    val respect = if (args.has("respectSystemSettings")) {
+      args.getBoolean("respectSystemSettings")
+    } else {
+      cfg.respectSystemHapticsSetting ?: true
+    }
     if (respect) {
       val enabled = try {
         Settings.System.getInt(activity.contentResolver, Settings.System.HAPTIC_FEEDBACK_ENABLED, 1) != 0
@@ -116,11 +127,12 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
       }
     }
 
-    val stopBefore = args.stopBeforePlay ?: (cfg.stopBeforePlay ?: true)
+    val stopBefore = if (args.has("stopBeforePlay")) {
+      args.getBoolean("stopBeforePlay")
+    } else {
+      cfg.stopBeforePlay ?: true
+    }
     if (stopBefore) vibrator.cancel()
-
-    val effectObj = args.effect
-    val type = effectObj.getString("type")
 
     val maxAmp = (cfg.maxAmplitude ?: 255).coerceIn(1, 255)
     val maxDur = (cfg.maxDurationMs ?: 10_000).coerceAtLeast(1)
@@ -132,7 +144,7 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
       return
     }
 
-    val usage = (args.usage ?: cfg.defaultUsage ?: "touch")
+    val usage = args.getString("usage", cfg.defaultUsage ?: "touch") ?: "touch"
     val aa = audioAttributesForUsage(usage, cfg)
 
     // API surface differs by SDK; AudioAttributes works broadly.
@@ -164,23 +176,33 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
 
     return when (type) {
       "oneshot" -> {
-        val dur = effectObj.getLong("durationMs").coerceAtMost(maxDur)
+        val dur = getLong(effectObj, "durationMs", "duration_ms").coerceAtMost(maxDur)
         val ampRaw = if (effectObj.has("amplitude")) effectObj.getInt("amplitude") else -1
         val amp = if (ampRaw <= 0) VibrationEffect.DEFAULT_AMPLITUDE else ampRaw.coerceIn(1, maxAmp)
         Triple(VibrationEffect.createOneShot(dur, amp), false, null)
       }
 
       "waveform" -> {
-        val timings = toLongArray(getArray(effectObj, "timingsMs"))
+        val timings = toLongArray(getArray(effectObj, "timingsMs", "timings_ms"))
         val repeat = if (effectObj.has("repeat")) effectObj.getInt("repeat") else -1
 
         // Enforce repeat safety
         val allowRepeat = cfg.allowRepeatingWaveforms ?: false
         val safeRepeat = if (!allowRepeat && repeat >= 0) -1 else repeat
+        val capped = capWaveformDuration(timings, maxDur)
+
+        if (capped.isEmpty()) {
+          throw IllegalArgumentException("timingsMs cannot be empty")
+        }
+        if (capped.all { it == 0L }) {
+          throw IllegalArgumentException("at least one timing must be non-zero")
+        }
 
         if (effectObj.has("amplitudes")) {
-          val amps = toIntArray(getArray(effectObj, "amplitudes")).map { it.coerceIn(0, maxAmp) }.toIntArray()
-          val capped = capWaveformDuration(timings, maxDur)
+          val amps = toIntArray(getArray(effectObj, "amplitudes", "amplitudes_ms")).map { it.coerceIn(0, maxAmp) }.toIntArray()
+          if (amps.size != capped.size) {
+            throw IllegalArgumentException("amplitudes must have same length as timingsMs")
+          }
           val eff = if (vibrator.hasAmplitudeControl()) {
             VibrationEffect.createWaveform(capped, amps, safeRepeat)
           } else {
@@ -190,13 +212,12 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
           val downgraded = !vibrator.hasAmplitudeControl()
           Triple(eff, downgraded, if (downgraded) "Device lacks amplitude control" else null)
         } else {
-          val capped = capWaveformDuration(timings, maxDur)
           Triple(VibrationEffect.createWaveform(capped, safeRepeat), false, null)
         }
       }
 
       "predefined" -> {
-        val id = effectObj.getString("effectId")
+        val id = getString(effectObj, "effectId", "effect_id")
         val effId = mapPredefinedEffect(id)
         Triple(VibrationEffect.createPredefined(effId), false, null)
       }
@@ -274,11 +295,32 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
     return out
   }
 
-  private fun getArray(obj: JSObject, key: String): JSArray {
-    if (!obj.has(key)) {
-      return JSArray()
+  private fun getArray(obj: JSObject, vararg keys: String): JSArray {
+    for (key in keys) {
+      if (!obj.has(key)) continue
+      val raw = obj.get(key)
+      when (raw) {
+        is JSArray -> return raw
+        is JSONArray -> return JSArray(raw.toString())
+        else -> {
+          val arr = JSArray.from(raw)
+          if (arr != null) return arr
+        }
+      }
     }
-    return JSArray.from(obj.get(key)) ?: JSArray()
+    return JSArray()
+  }
+
+  private fun getLong(obj: JSObject, primary: String, fallback: String): Long {
+    if (obj.has(primary)) return obj.getLong(primary)
+    if (obj.has(fallback)) return obj.getLong(fallback)
+    throw IllegalArgumentException("missing field `$primary`")
+  }
+
+  private fun getString(obj: JSObject, primary: String, fallback: String): String {
+    if (obj.has(primary)) return obj.getString(primary)
+    if (obj.has(fallback)) return obj.getString(fallback)
+    throw IllegalArgumentException("missing field `$primary`")
   }
 
   private fun getObject(arr: JSArray, index: Int): JSObject {
