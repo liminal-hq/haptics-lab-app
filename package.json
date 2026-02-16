@@ -3,6 +3,9 @@
   "private": true,
   "type": "module",
   "packageManager": "pnpm@10.29.3",
+  "engines": {
+    "node": "20.20.0"
+  },
   "scripts": {
     "dev": "pnpm -C app/haptics-lab dev",
     "build": "pnpm -C app/haptics-lab build",
