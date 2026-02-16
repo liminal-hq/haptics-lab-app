@@ -3634,14 +3634,13 @@ dependencies = [
  "serde",
  "serde_json",
  "tauri",
+ "tauri-plugin",
  "thiserror 2.0.18",
 ]
 
 [[package]]
 name = "tauri-plugin-material-you"
 version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2ed1861059234c55196e4a8b3177d61f90af459a5d0091b996b1648ef31a2301"
 dependencies = [
  "jni",
  "serde",
