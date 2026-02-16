@@ -3,13 +3,17 @@
 ## Unit Tests
 
 ### JavaScript / TypeScript
+
 Run Vitest for frontend and guest binding logic:
+
 ```bash
 pnpm test
 ```
 
 ### Rust
+
 Run cargo tests for the plugin backend:
+
 ```bash
 pnpm rust:test
 ```

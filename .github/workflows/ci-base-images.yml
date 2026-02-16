@@ -6,11 +6,11 @@ on:
       - main
       - chore/integrate-jules-haptics
     paths:
-      - "docker/ci/**"
-      - ".github/workflows/ci-base-images.yml"
+      - 'docker/ci/**'
+      - '.github/workflows/ci-base-images.yml'
   workflow_dispatch:
   schedule:
-    - cron: "0 5 * * 1"
+    - cron: '0 5 * * 1'
 
 permissions:
   contents: read

@@ -5,6 +5,7 @@
 **Haptics Lab** is a Tauri v2 application designed for exploring, authoring, and replaying haptic patterns on Android devices. It serves as a "lab bench" for developers to prototype haptic sensations using native Android APIs.
 
 The primary goals are:
+
 - Build a cross-platform Tauri v2 app (React + MUI).
 - Implement a native Android haptics plugin (`tauri-plugin-haptics`) using Rust and Kotlin.
 - Provide a UI for testing capabilities, playing one-shot effects, and designing waveforms.
@@ -40,32 +41,32 @@ The plugin exposes a TypeScript API via `@liminal-hq/plugin-haptics`. The core c
 
 ```typescript
 export type EffectRequest = {
-  id?: string;
-  usage?: "touch" | "notification" | "alarm" | "media";
-  respectSystemSettings?: boolean;
-  stopBeforePlay?: boolean;
-  effect: OneShot | Waveform | Composition | Predefined | EnvelopeWaveform;
+	id?: string;
+	usage?: 'touch' | 'notification' | 'alarm' | 'media';
+	respectSystemSettings?: boolean;
+	stopBeforePlay?: boolean;
+	effect: OneShot | Waveform | Composition | Predefined | EnvelopeWaveform;
 };
 
 export type OneShot = {
-  type: "oneshot";
-  durationMs: number;
-  amplitude?: number; // 1-255
+	type: 'oneshot';
+	durationMs: number;
+	amplitude?: number; // 1-255
 };
 
 export type Waveform = {
-  type: "waveform";
-  timingsMs: number[];
-  amplitudes?: number[]; // 0-255
-  repeat?: number;
+	type: 'waveform';
+	timingsMs: number[];
+	amplitudes?: number[]; // 0-255
+	repeat?: number;
 };
 
 export type Capabilities = {
-  hasVibrator: boolean;
-  hasAmplitudeControl: boolean;
-  compositionSupported: boolean;
-  envelopeSupported: boolean;
-  // ... other details
+	hasVibrator: boolean;
+	hasAmplitudeControl: boolean;
+	compositionSupported: boolean;
+	envelopeSupported: boolean;
+	// ... other details
 };
 ```
 
@@ -85,15 +86,15 @@ The UI uses Material UI (MUI) and integrates with Android's Material You dynamic
 
 ## Build Commands
 
-| Command | Description |
-| :--- | :--- |
-| `pnpm install` | Install dependencies for all packages. |
-| `pnpm tauri:dev` | Run the desktop development server. |
-| `pnpm android:init` | Initialize the Android project (first run). |
-| `pnpm android:dev` | Run the app on an Android device/emulator. |
-| `pnpm android:build` | Build the Android APK/AAB. |
-| `pnpm ci` | Run linting, typechecking, and tests. |
-| `pnpm rust:test` | Run Rust unit tests. |
+| Command              | Description                                 |
+| :------------------- | :------------------------------------------ |
+| `pnpm install`       | Install dependencies for all packages.      |
+| `pnpm tauri:dev`     | Run the desktop development server.         |
+| `pnpm android:init`  | Initialize the Android project (first run). |
+| `pnpm android:dev`   | Run the app on an Android device/emulator.  |
+| `pnpm android:build` | Build the Android APK/AAB.                  |
+| `pnpm ci`            | Run linting, typechecking, and tests.       |
+| `pnpm rust:test`     | Run Rust unit tests.                        |
 
 ## Testing Strategy
 

@@ -1,9 +1,11 @@
 # Tauri v2 Android Haptics Plugin (tauri-plugin-haptics)
 
 # Goal
+
 Build a generic Tauri v2 plugin that lets a JS UI drive Android phone haptics for “haptics lab” experimentation.
 
 The plugin must:
+
 - Work from the Tauri JS layer (invoke-based API).
 - Route through a Rust plugin (single cross-platform surface).
 - Use native Kotlin on Android (Vibrator / VibrationEffect).
@@ -11,9 +13,9 @@ The plugin must:
 - Be safe by default (duration limits, amplitude clamping, respect user settings).
 
 Non-goals:
+
 - Perfectly reproducing DualSense / Joy‑Con haptics (phone actuators and APIs are different).
 - Audio-to-haptics DSP in v1 (we’ll leave a hook for later).
-
 
 # Big picture architecture
 
@@ -37,17 +39,18 @@ sequenceDiagram
   Rust-->>UI: Promise resolves
 ```
 
-
 # API surface (stable JS contract)
 
 Everything centres around one shape: `EffectRequest`.
 
 ## Commands
+
 - `capabilities(): Promise<Capabilities>`
 - `play(req: EffectRequest): Promise<PlayResult>`
 - `stop(): Promise<void>`
 
 Optional (nice-to-have):
+
 - `playPreset(id: PresetId, opts?): Promise<PlayResult>`
 - `validate(req: EffectRequest): Promise<ValidationResult>` (client-side validation exists too)
 
@@ -55,108 +58,90 @@ Optional (nice-to-have):
 
 ```ts
 export type HapticsUsage =
-  | "touch"          // foreground UI interactions
-  | "notification"   // attentional
-  | "alarm"          // background-allowed style
-  | "media";
+	| 'touch' // foreground UI interactions
+	| 'notification' // attentional
+	| 'alarm' // background-allowed style
+	| 'media';
 
 export type EffectRequest = {
-  id?: string;             // for lab UI: track what you played
-  usage?: HapticsUsage;    // default from plugin config
-  respectSystemSettings?: boolean; // default true
-  stopBeforePlay?: boolean; // default true
+	id?: string; // for lab UI: track what you played
+	usage?: HapticsUsage; // default from plugin config
+	respectSystemSettings?: boolean; // default true
+	stopBeforePlay?: boolean; // default true
 
-  // one of:
-  effect:
-    | OneShot
-    | Waveform
-    | Composition
-    | Predefined
-    | EnvelopeWaveform;
+	// one of:
+	effect: OneShot | Waveform | Composition | Predefined | EnvelopeWaveform;
 };
 
 export type OneShot = {
-  type: "oneshot";
-  durationMs: number;
-  amplitude?: number; // 1..255, omit for default
+	type: 'oneshot';
+	durationMs: number;
+	amplitude?: number; // 1..255, omit for default
 };
 
 export type Waveform = {
-  type: "waveform";
-  timingsMs: number[];      // alternates off/on durations; often start with 0
-  amplitudes?: number[];    // 0..255; if omitted, becomes on/off waveform
-  repeat?: number;          // -1 no repeat, else index into timings
+	type: 'waveform';
+	timingsMs: number[]; // alternates off/on durations; often start with 0
+	amplitudes?: number[]; // 0..255; if omitted, becomes on/off waveform
+	repeat?: number; // -1 no repeat, else index into timings
 };
 
 export type Composition = {
-  type: "composition";
-  steps: Array<
-    | { kind: "primitive"; primitive: PrimitiveId; scale?: number; delayMs?: number }
-    | { kind: "effect"; effect: PredefinedEffectId; delayMs?: number }
-  >;
+	type: 'composition';
+	steps: Array<
+		| { kind: 'primitive'; primitive: PrimitiveId; scale?: number; delayMs?: number }
+		| { kind: 'effect'; effect: PredefinedEffectId; delayMs?: number }
+	>;
 };
 
 export type Predefined = {
-  type: "predefined";
-  effectId: PredefinedEffectId;
+	type: 'predefined';
+	effectId: PredefinedEffectId;
 };
 
 // Android 16+ (API 36) only when supported.
 export type EnvelopeWaveform = {
-  type: "envelopeWaveform";
-  initialFrequencyHz?: number;
-  controlPoints: Array<{ amplitude: number; frequencyHz: number; durationMs: number }>;
+	type: 'envelopeWaveform';
+	initialFrequencyHz?: number;
+	controlPoints: Array<{ amplitude: number; frequencyHz: number; durationMs: number }>;
 };
 
 export type Capabilities = {
-  hasVibrator: boolean;
-  hasAmplitudeControl: boolean;
-  effectsSupport?: Record<PredefinedEffectId, "yes" | "no" | "unknown">;
+	hasVibrator: boolean;
+	hasAmplitudeControl: boolean;
+	effectsSupport?: Record<PredefinedEffectId, 'yes' | 'no' | 'unknown'>;
 
-  // Composition primitives
-  compositionSupported: boolean;
-  primitives?: Record<PrimitiveId, boolean>;
+	// Composition primitives
+	compositionSupported: boolean;
+	primitives?: Record<PrimitiveId, boolean>;
 
-  // Envelope effects (API 36)
-  envelopeSupported: boolean;
-  envelopeInfo?: {
-    maxSize: number;
-    minControlPointDurationMs: number;
-    maxControlPointDurationMs: number;
-    maxDurationMs: number;
-    frequencyProfile?: {
-      minHz: number;
-      maxHz: number;
-    };
-  };
+	// Envelope effects (API 36)
+	envelopeSupported: boolean;
+	envelopeInfo?: {
+		maxSize: number;
+		minControlPointDurationMs: number;
+		maxControlPointDurationMs: number;
+		maxDurationMs: number;
+		frequencyProfile?: {
+			minHz: number;
+			maxHz: number;
+		};
+	};
 
-  // System toggles
-  hapticFeedbackEnabled?: boolean;
+	// System toggles
+	hapticFeedbackEnabled?: boolean;
 };
 
 export type PlayResult = {
-  ok: boolean;
-  downgraded?: boolean;
-  downgradeReason?: string;
+	ok: boolean;
+	downgraded?: boolean;
+	downgradeReason?: string;
 };
 
-export type PrimitiveId =
-  | "tick"
-  | "click"
-  | "thud"
-  | "spin"
-  | "quick_rise"
-  | "slow_rise";
+export type PrimitiveId = 'tick' | 'click' | 'thud' | 'spin' | 'quick_rise' | 'slow_rise';
 
-export type PredefinedEffectId =
-  | "click"
-  | "double_click"
-  | "tick"
-  | "thud"
-  | "pop"
-  | "heavy_click";
+export type PredefinedEffectId = 'click' | 'double_click' | 'tick' | 'thud' | 'pop' | 'heavy_click';
 ```
-
 
 # Plugin configuration (tauri.conf.json)
 
@@ -164,27 +149,27 @@ Under `plugins.haptics`:
 
 ```json
 {
-  "plugins": {
-    "haptics": {
-      "defaultUsage": "touch",
-      "respectSystemHapticsSetting": true,
-      "stopBeforePlay": true,
-      "maxDurationMs": 10000,
-      "maxAmplitude": 255,
-      "allowRepeatingWaveforms": false,
-      "android": {
-        "foregroundAudioUsage": "USAGE_ASSISTANCE_SONIFICATION",
-        "backgroundAudioUsage": "USAGE_ALARM"
-      }
-    }
-  }
+	"plugins": {
+		"haptics": {
+			"defaultUsage": "touch",
+			"respectSystemHapticsSetting": true,
+			"stopBeforePlay": true,
+			"maxDurationMs": 10000,
+			"maxAmplitude": 255,
+			"allowRepeatingWaveforms": false,
+			"android": {
+				"foregroundAudioUsage": "USAGE_ASSISTANCE_SONIFICATION",
+				"backgroundAudioUsage": "USAGE_ALARM"
+			}
+		}
+	}
 }
 ```
 
 Config principles:
+
 - Clamp amplitude/time even if the UI goes wild.
 - Repeat loops are opt-in (they’re easy to abuse and annoying).
-
 
 # Repository layout (plugin)
 
@@ -216,7 +201,6 @@ packages/
       src/types.ts
       tsconfig.json
 ```
-
 
 # Rust side (tauri plugin)
 
@@ -562,11 +546,10 @@ pub fn init<R: Runtime>() -> TauriPlugin<R, Option<config::Config>> {
 
 ```js
 (function () {
-  // Keep minimal; prefer importing from the guest-js package.
-  // This exists for users relying on global __TAURI__ mode.
+	// Keep minimal; prefer importing from the guest-js package.
+	// This exists for users relying on global __TAURI__ mode.
 })();
 ```
-
 
 # Android (Kotlin) implementation
 
@@ -962,36 +945,36 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
 ```
 
 Notes:
+
 - All commands execute on the main thread by default. This implementation stays fast.
 - Waveform repeat is blocked unless explicitly enabled.
 - Amplitude waveforms degrade to timings-only if amplitude control is missing.
 - Envelope effects are strictly optional (API 36 + device support).
-
 
 # JS package (guest-js)
 
 ## `guest-js/src/index.ts`
 
 ```ts
-import { invoke } from "@tauri-apps/api/core";
-import type { Capabilities, EffectRequest, PlayResult } from "./types";
+import { invoke } from '@tauri-apps/api/core';
+import type { Capabilities, EffectRequest, PlayResult } from './types';
 
 export function capabilities(): Promise<Capabilities> {
-  return invoke("plugin:haptics|capabilities");
+	return invoke('plugin:haptics|capabilities');
 }
 
 export function play(req: EffectRequest): Promise<PlayResult> {
-  return invoke("plugin:haptics|play", { req });
+	return invoke('plugin:haptics|play', { req });
 }
 
 export function stop(): Promise<void> {
-  return invoke("plugin:haptics|stop");
+	return invoke('plugin:haptics|stop');
 }
 ```
 
 ## `guest-js/src/types.ts`
-(Use the TS types from the earlier “API surface” section.)
 
+(Use the TS types from the earlier “API surface” section.)
 
 # Permissions (Tauri)
 
@@ -1028,7 +1011,6 @@ description = "Allow stopping haptics"
 commands = ["stop"]
 ```
 
-
 # Integrating into the Haptics Lab Tauri app
 
 ## `src-tauri/Cargo.toml`
@@ -1053,41 +1035,39 @@ pub fn run() {
 ## UI usage
 
 ```ts
-import * as haptics from "@liminal-hq/plugin-haptics";
+import * as haptics from '@liminal-hq/plugin-haptics';
 
 const caps = await haptics.capabilities();
 
 await haptics.play({
-  usage: "touch",
-  effect: {
-    type: "waveform",
-    timingsMs: [0, 15, 10, 30, 10, 60],
-    amplitudes: [0, 80, 0, 140, 0, 220],
-  },
+	usage: 'touch',
+	effect: {
+		type: 'waveform',
+		timingsMs: [0, 15, 10, 30, 10, 60],
+		amplitudes: [0, 80, 0, 140, 0, 220],
+	},
 });
 ```
 
-
 # “DualSense-ish” mapping guidance (what’s realistic on phones)
 
-You can aim for similar *shapes* even if you can’t match the same actuator physics.
+You can aim for similar _shapes_ even if you can’t match the same actuator physics.
 
 - Joy‑Con / DualSense can express a wide range because they’re designed for haptics (HD rumble / voice‑coil).
 - Phones typically have an LRA with strong tuning and a narrower expressive range.
 
 In practice:
+
 - Use short, high-contrast waveforms to create “texture” (ticks, rattles, bumps).
 - Use composition primitives when available to get more polished, device‑tuned sensations.
 - Treat envelope waveform (API 36) as your future “closest to controller” mechanism because it can specify frequency + amplitude over time.
 
-
 # Next steps
 
-1) Build the minimal plugin: `capabilities / play / stop` with oneshot + waveform.
-2) Add composition primitives + UI that shows primitive support.
-3) Add envelope waveform UI guarded by: `caps.envelopeSupported`.
-4) Add a small library of presets in the lab app (JSON patterns) + a “share pattern” export.
-5) If you still want “audio driven haptics”, add a DSP layer in Rust that converts an amplitude envelope (or band-limited signal) into either:
+1. Build the minimal plugin: `capabilities / play / stop` with oneshot + waveform.
+2. Add composition primitives + UI that shows primitive support.
+3. Add envelope waveform UI guarded by: `caps.envelopeSupported`.
+4. Add a small library of presets in the lab app (JSON patterns) + a “share pattern” export.
+5. If you still want “audio driven haptics”, add a DSP layer in Rust that converts an amplitude envelope (or band-limited signal) into either:
    - waveforms (timings + amplitude), or
    - envelope control points (when supported).
-

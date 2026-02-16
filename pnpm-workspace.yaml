@@ -1,4 +1,4 @@
 packages:
-  - "plugin/*"
-  - "plugin/*/guest-js"
-  - "app/*"
+  - 'plugin/*'
+  - 'plugin/*/guest-js'
+  - 'app/*'

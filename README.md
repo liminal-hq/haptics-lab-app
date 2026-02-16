@@ -18,19 +18,20 @@ Alternatively, use the provided Devcontainer which has everything pre-installed.
 
 ### Commands
 
-| Command | Description |
-| :--- | :--- |
-| `pnpm install` | Install dependencies for all packages. |
-| `pnpm tauri:dev` | Run the desktop development server. |
-| `pnpm android:init` | Initialize the Android project (first run). |
-| `pnpm android:dev` | Run the app on an Android device/emulator. |
-| `pnpm android:build` | Build the Android APK/AAB. |
-| `pnpm ci` | Run linting, typechecking, and tests. |
+| Command              | Description                                 |
+| :------------------- | :------------------------------------------ |
+| `pnpm install`       | Install dependencies for all packages.      |
+| `pnpm tauri:dev`     | Run the desktop development server.         |
+| `pnpm android:init`  | Initialize the Android project (first run). |
+| `pnpm android:dev`   | Run the app on an Android device/emulator.  |
+| `pnpm android:build` | Build the Android APK/AAB.                  |
+| `pnpm ci`            | Run linting, typechecking, and tests.       |
 
 ## Plugin
 
 The haptics plugin source code is located in `plugin/tauri-plugin-haptics`.
 It includes:
+
 - Rust core logic
 - Android Kotlin implementation
 - TypeScript guest bindings
