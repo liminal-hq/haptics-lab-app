@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    apphaptics_lab_lib::run()
+    haptics_lab_lib::run()
 }
