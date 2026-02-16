@@ -68,7 +68,7 @@ Single repo, with pnpm workspaces and a small Rust workspace:
 
 Notes:
 
-- `packages/tauri-plugin-haptics` contains the full plugin: Rust core, Android Kotlin implementation, and the JS guest bindings consumed by the React UI.
+- `plugin/tauri-plugin-haptics` contains the full plugin: Rust core, Android Kotlin implementation, and the JS guest bindings consumed by the React UI.
 - The app lives under `app/haptic-lab/` (with `app/haptic-lab/src/` and `app/haptic-lab/src-tauri/`) so the repo can host other apps later..
 
 # Build phases (the order the AI should execute)
@@ -134,61 +134,61 @@ The devcontainer provides most of this automatically.
 
 ```yaml
 packages:
-  - "packages/*"
+  - 'plugin/*'
 ```
 
 ## Root `package.json` (scripts)
 
 ```json
 {
-  "name": "haptics-lab",
-  "private": true,
-  "packageManager": "pnpm@10.29.3",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
+	"name": "haptics-lab",
+	"private": true,
+	"packageManager": "pnpm@10.29.3",
+	"scripts": {
+		"dev": "vite",
+		"build": "vite build",
+		"preview": "vite preview",
 
-    "tauri": "tauri",
-    "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build",
+		"tauri": "tauri",
+		"tauri:dev": "tauri dev",
+		"tauri:build": "tauri build",
 
-    "android:init": "tauri android init",
-    "android:dev": "tauri android dev",
-    "android:build": "tauri android build",
+		"android:init": "tauri android init",
+		"android:dev": "tauri android dev",
+		"android:build": "tauri android build",
 
-    "lint": "eslint .",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run",
+		"lint": "eslint .",
+		"typecheck": "tsc -p tsconfig.json --noEmit",
+		"test": "vitest run",
 
-    "rust:fmt": "cargo fmt --all --check",
-    "rust:clippy": "cargo clippy --workspace --all-targets --all-features -- -D warnings",
-    "rust:test": "cargo test --workspace",
+		"rust:fmt": "cargo fmt --all --check",
+		"rust:clippy": "cargo clippy --workspace --all-targets --all-features -- -D warnings",
+		"rust:test": "cargo test --workspace",
 
-    "ci": "pnpm lint && pnpm typecheck && pnpm test && pnpm rust:fmt && pnpm rust:clippy && pnpm rust:test"
-  },
-  "dependencies": {
-    "@mui/material": "^6.0.0",
-    "@emotion/react": "^11.0.0",
-    "@emotion/styled": "^11.0.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+		"ci": "pnpm lint && pnpm typecheck && pnpm test && pnpm rust:fmt && pnpm rust:clippy && pnpm rust:test"
+	},
+	"dependencies": {
+		"@mui/material": "^6.0.0",
+		"@emotion/react": "^11.0.0",
+		"@emotion/styled": "^11.0.0",
+		"react": "^19.0.0",
+		"react-dom": "^19.0.0",
 
-    "@liminal-hq/plugin-haptics": "workspace:*",
-    "@liminal-hq/plugin-material-you": "^0.0.0"
-  },
-  "devDependencies": {
-    "@tauri-apps/cli": "^2.0.0",
-    "@tauri-apps/api": "^2.0.0",
+		"@liminal-hq/plugin-haptics": "workspace:*",
+		"@liminal-hq/plugin-material-you": "^0.0.0"
+	},
+	"devDependencies": {
+		"@tauri-apps/cli": "^2.0.0",
+		"@tauri-apps/api": "^2.0.0",
 
-    "typescript": "^5.0.0",
-    "vite": "^6.0.0",
-    "vitest": "^2.0.0",
-    "eslint": "^9.0.0",
-    "@eslint/js": "^9.0.0",
-    "globals": "^15.0.0",
-    "typescript-eslint": "^8.0.0"
-  }
+		"typescript": "^5.0.0",
+		"vite": "^6.0.0",
+		"vitest": "^2.0.0",
+		"eslint": "^9.0.0",
+		"@eslint/js": "^9.0.0",
+		"globals": "^15.0.0",
+		"typescript-eslint": "^8.0.0"
+	}
 }
 ```
 
@@ -203,37 +203,37 @@ Notes:
 
 ```json
 {
-  "$schema": "../node_modules/@tauri-apps/cli/schema.json",
-  "productName": "Haptics Lab",
-  "identifier": "ca.liminalhq.hapticslab",
-  "build": {
-    "beforeDevCommand": "pnpm dev",
-    "beforeBuildCommand": "pnpm build",
-    "devUrl": "http://localhost:5173",
-    "frontendDist": "../dist"
-  },
-  "app": {
-    "windows": [
-      {
-        "title": "Haptics Lab",
-        "width": 1000,
-        "height": 720
-      }
-    ]
-  },
-  "plugins": {
-    "materialYou": {
-      "cssVariablesPrefix": "m3"
-    },
-    "haptics": {
-      "defaultUsage": "touch",
-      "respectSystemHapticsSetting": true,
-      "stopBeforePlay": true,
-      "maxDurationMs": 10000,
-      "maxAmplitude": 255,
-      "allowRepeatingWaveforms": false
-    }
-  }
+	"$schema": "../node_modules/@tauri-apps/cli/schema.json",
+	"productName": "Haptics Lab",
+	"identifier": "ca.liminalhq.hapticslab",
+	"build": {
+		"beforeDevCommand": "pnpm dev",
+		"beforeBuildCommand": "pnpm build",
+		"devUrl": "http://localhost:5173",
+		"frontendDist": "../dist"
+	},
+	"app": {
+		"windows": [
+			{
+				"title": "Haptics Lab",
+				"width": 1000,
+				"height": 720
+			}
+		]
+	},
+	"plugins": {
+		"materialYou": {
+			"cssVariablesPrefix": "m3"
+		},
+		"haptics": {
+			"defaultUsage": "touch",
+			"respectSystemHapticsSetting": true,
+			"stopBeforePlay": true,
+			"maxDurationMs": 10000,
+			"maxAmplitude": 255,
+			"allowRepeatingWaveforms": false
+		}
+	}
 }
 ```
 
@@ -248,7 +248,7 @@ Create a root `Cargo.toml` workspace so CI can run `cargo test --workspace`:
 resolver = "2"
 members = [
   "src-tauri",
-  "packages/tauri-plugin-haptics"
+  "plugin/tauri-plugin-haptics"
 ]
 ```
 
@@ -266,7 +266,7 @@ edition = "2021"
 ta u r i = { version = "2" }
 
 # Local plugin
- ta u r i-plugin-haptics = { path = "../packages/tauri-plugin-haptics" }
+ ta u r i-plugin-haptics = { path = "../plugin/tauri-plugin-haptics" }
 
 # Material You plugin (choose one):
 # A) crates.io
@@ -304,25 +304,25 @@ Key decisions for MVP:
 
 # JS guest bindings (package)
 
-The JS guest bindings live inside the plugin at `packages/tauri-plugin-haptics/guest-js` and should publish as `@liminal-hq/plugin-haptics`.
+The JS guest bindings live inside the plugin at `plugin/tauri-plugin-haptics/guest-js` and should publish as `@liminal-hq/plugin-haptics`.
 
 Minimal `guest-js/package.json`:
 
 ```json
 {
-  "name": "@liminal-hq/plugin-haptics",
-  "version": "0.1.0",
-  "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "files": ["dist"],
-  "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "lint": "eslint ."
-  },
-  "dependencies": {
-    "@tauri-apps/api": "^2.0.0"
-  }
+	"name": "@liminal-hq/plugin-haptics",
+	"version": "0.1.0",
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"files": ["dist"],
+	"scripts": {
+		"build": "tsc -p tsconfig.json",
+		"lint": "eslint ."
+	},
+	"dependencies": {
+		"@tauri-apps/api": "^2.0.0"
+	}
 }
 ```
 
@@ -386,7 +386,7 @@ Suggested folders:
 
 ## Rust
 
-- Unit tests in `packages/tauri-plugin-haptics/src/`:
+- Unit tests in `plugin/tauri-plugin-haptics/src/`:
   - `validate_and_clamp(req, cfg)` behaviour
   - repeat safety
   - amplitude clamping
@@ -437,22 +437,22 @@ Start from the provided Threshold devcontainer and tweak:
 
 ```json
 {
-  "name": "Haptics Lab Dev",
-  "dockerFile": "Dockerfile",
-  "forwardPorts": [5173, 1420],
-  "customizations": {
-    "vscode": {
-      "extensions": [
-        "rust-lang.rust-analyzer",
-        "esbenp.prettier-vscode",
-        "dbaeumer.vscode-eslint",
-        "tauri-apps.tauri-vscode",
-        "ms-vscode.vscode-typescript-next",
-        "streetsidesoftware.code-spell-checker"
-      ]
-    }
-  },
-  "postCreateCommand": "pnpm install && rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android"
+	"name": "Haptics Lab Dev",
+	"dockerFile": "Dockerfile",
+	"forwardPorts": [5173, 1420],
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"rust-lang.rust-analyzer",
+				"esbenp.prettier-vscode",
+				"dbaeumer.vscode-eslint",
+				"tauri-apps.tauri-vscode",
+				"ms-vscode.vscode-typescript-next",
+				"streetsidesoftware.code-spell-checker"
+			]
+		}
+	},
+	"postCreateCommand": "pnpm install && rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android"
 }
 ```
 
@@ -577,7 +577,7 @@ Must include:
 - Where the plugin lives
 - How to run tests: `pnpm ci`
 
-## `packages/tauri-plugin-haptics/README.md`
+## `plugin/tauri-plugin-haptics/README.md`
 
 Must include:
 
@@ -614,7 +614,7 @@ This repo is intended to be built by an autonomous coding agent. The following r
 
 - This is a `pnpm` workspace monorepo.
 - `app/haptic-lab/` contains the Tauri application.
-- `packages/tauri-plugin-haptics/` contains the plugin (Rust + Android Kotlin + JS guest bindings).
+- `plugin/tauri-plugin-haptics/` contains the plugin (Rust + Android Kotlin + JS guest bindings).
 - `docs/` contains repo-level documentation.
 
 ### Best practices
@@ -698,4 +698,3 @@ Repo is “done” when:
 - Android workflow produces build artifacts
 - Devcontainer builds and `postCreateCommand` succeeds
 - Docs are sufficient for an autonomous agent to build and iterate
-

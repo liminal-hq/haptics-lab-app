@@ -1,0 +1,41 @@
+{
+	"name": "haptics-lab-monorepo",
+	"private": true,
+	"type": "module",
+	"packageManager": "pnpm@10.29.3",
+	"engines": {
+		"node": "20.20.0"
+	},
+	"scripts": {
+		"dev": "pnpm --filter haptics-lab dev",
+		"prebuild": "pnpm --filter @liminal-hq/plugin-haptics build",
+		"build": "pnpm --filter haptics-lab build",
+		"preview": "pnpm --filter haptics-lab preview",
+		"tauri": "pnpm --filter haptics-lab tauri",
+		"tauri:dev": "pnpm --filter haptics-lab tauri dev",
+		"tauri:build": "pnpm --filter haptics-lab tauri build",
+		"android:init": "pnpm --filter haptics-lab tauri android init",
+		"android:dev": "pnpm --filter haptics-lab tauri android dev",
+		"android:build": "pnpm --filter haptics-lab tauri android build",
+		"format": "prettier . --write",
+		"format:check": "prettier . --check",
+		"lint": "eslint .",
+		"typecheck": "tsc -b",
+		"test": "vitest run",
+		"rust:fmt": "cargo fmt --all --check",
+		"rust:clippy": "cargo clippy --workspace --all-targets --all-features -- -D warnings",
+		"rust:test": "cargo test --workspace",
+		"ci": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm rust:fmt && pnpm rust:clippy && pnpm rust:test"
+	},
+	"devDependencies": {
+		"@tauri-apps/cli": "^2.0.0",
+		"typescript": "^5.0.0",
+		"vite": "^6.0.0",
+		"vitest": "^2.0.0",
+		"prettier": "^3.6.2",
+		"eslint": "^9.0.0",
+		"@eslint/js": "^9.0.0",
+		"globals": "^15.0.0",
+		"typescript-eslint": "^8.0.0"
+	}
+}

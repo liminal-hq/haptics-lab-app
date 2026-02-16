@@ -1,0 +1,7 @@
+[workspace]
+resolver = "2"
+members = [
+  "app/haptics-lab/src-tauri",
+  "plugin/tauri-plugin-material-you",
+  "plugin/tauri-plugin-haptics",
+]

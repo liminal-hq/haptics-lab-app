@@ -1,0 +1,35 @@
+name: Android Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/${{ github.repository_owner }}/haptics-lab-ci-android:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build Android
+        run: |
+          pnpm android:init
+          pnpm android:build
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v6
+        with:
+          name: app-release.apk
+          path: app/haptics-lab/src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk

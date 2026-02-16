@@ -1,0 +1,12 @@
+**/node_modules/
+**/dist/
+**/build/
+**/target/
+**/.gradle/
+**/*.tsbuildinfo
+**/.tauri/
+.cargo-ok
+.cargo_vcs_info.json
+.DS_Store
+*.log
+.pnpm-store

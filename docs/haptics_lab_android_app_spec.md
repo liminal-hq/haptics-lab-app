@@ -30,10 +30,10 @@ A small, focused Android app for exploring, authoring, and replaying haptic “p
 
 The app is essentially a “lab bench” with:
 
-1) A **Preset Library** (list)
-2) A **Designer** (editor + preview)
-3) A **Player** (transport controls + looping)
-4) A **Device Inspector** (capabilities + notes)
+1. A **Preset Library** (list)
+2. A **Designer** (editor + preview)
+3. A **Player** (transport controls + looping)
+4. A **Device Inspector** (capabilities + notes)
 
 The default landing screen is the Preset Library with a prominent “New Pattern” button.
 
@@ -97,6 +97,7 @@ The default landing screen is the Preset Library with a prominent “New Pattern
   - If `hasAmplitudeControl=false`, show a warning and fallback preview behaviour.
 
 **Data model:**
+
 - `WaveformEffect(timings: LongArray, amplitudes: IntArray, repeatIndex: Int)`
 
 ### B) Composition editor (primitives)
@@ -116,9 +117,11 @@ The default landing screen is the Preset Library with a prominent “New Pattern
   - “Spin-up engine” (slow rise + buzz)
 
 **Validation:**
+
 - If a primitive isn’t supported, disable selection or mark as incompatible.
 
 **Data model:**
+
 - `CompositionEffect(steps: List<PrimitiveStep>)`
 
 ### C) Envelope editor (intensity + sharpness)
@@ -143,6 +146,7 @@ The default landing screen is the Preset Library with a prominent “New Pattern
   - Durations > 0
 
 **Data model:**
+
 - `EnvelopeEffect(points: List<EnvelopePoint>, initialSharpness: Float)`
 
 ## Playback and transport
@@ -150,6 +154,7 @@ The default landing screen is the Preset Library with a prominent “New Pattern
 Transport is consistent across modes.
 
 Controls:
+
 - Play
 - Stop
 - Loop toggle
@@ -158,6 +163,7 @@ Controls:
 - Global time stretch (0.5× to 2×)
 
 Behaviour:
+
 - Looping effects must be cancellable immediately.
 - Use a foreground UX assumption: if app goes background, stop playback (configurable, default on).
 - Provide a “Hold to play” button for quick tactile iteration.
@@ -175,6 +181,7 @@ A preset contains:
 - `createdAt`, `updatedAt`
 
 Built-in sample presets:
+
 - Minimal click
 - Strong thud
 - Double-tap
@@ -199,6 +206,7 @@ Built-in sample presets:
 ## Device Inspector (capabilities)
 
 Display:
+
 - `Build.VERSION.SDK_INT`
 - `vibrator.hasVibrator()`
 - `vibrator.hasAmplitudeControl()`
@@ -207,6 +215,7 @@ Display:
 - Frequency profile summary (min/max supported, notes)
 
 Also include a “What this means” section with plain language:
+
 - If amplitude control is missing: waveforms become on/off.
 - If envelopes unsupported: you’ll rely on primitives and waveforms.
 
@@ -229,6 +238,7 @@ Create a small abstraction:
   - Handles capability-based fallbacks
 
 Playback service object:
+
 - `HapticsPlayer`
   - `play(preset, options)`
   - `stop()`
@@ -261,4 +271,3 @@ Playback service object:
 - Do you want a single-screen “lab bench” layout (library left, editor right) for tablets?
 - Should presets be stored as pure JSON in Room (simple) or as typed tables (more structured)?
 - Do you want to support API < 26 at all, or keep minSdk 26 and simplify?
-
