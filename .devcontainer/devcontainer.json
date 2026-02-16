@@ -1,6 +1,8 @@
 {
   "name": "Haptics Lab Dev",
-  "dockerFile": "Dockerfile",
+  // Local fallback: uncomment to build from source instead of pulling GHCR image.
+  // "dockerFile": "Dockerfile",
+  "image": "ghcr.io/liminal-hq/haptics-lab-app-devcontainer:latest",
   "forwardPorts": [5173, 1420],
   "customizations": {
     "vscode": {
@@ -14,5 +16,5 @@
       ]
     }
   },
-  "postCreateCommand": "pnpm install && rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android"
+  "postCreateCommand": "pnpm install"
 }

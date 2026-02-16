@@ -79,7 +79,12 @@ RUN yes | sdkmanager --licenses && \
 
 # Install Rust toolchain (stable)
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable \
-    && rustup component add clippy rustfmt
+    && rustup component add clippy rustfmt \
+    && rustup target add \
+    aarch64-linux-android \
+    armv7-linux-androideabi \
+    i686-linux-android \
+    x86_64-linux-android
 
 # Install experimental Tauri CLI for portable AppImage builds
 RUN cargo install tauri-cli \
