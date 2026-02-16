@@ -5,54 +5,23 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+  packages: read
+
 jobs:
   build-android:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/${{ github.repository_owner }}/haptics-lab-ci-android:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v6
-        with:
-          node-version-file: package.json
-          cache: "pnpm"
-
-      - name: Setup Java
-        uses: actions/setup-java@v5
-        with:
-          distribution: "temurin"
-          java-version: "17"
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Pin Android SDK Components
-        run: |
-          yes | sdkmanager --licenses
-          sdkmanager --channel=0 --install \
-            "platform-tools" \
-            "platforms;android-36" \
-            "build-tools;36.0.0" \
-            "ndk;28.2.13676358"
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
 
       - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libwebkit2gtk-4.1-dev \
-            build-essential \
-            curl \
-            wget \
-            file \
-            libssl-dev \
-            libgtk-3-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev
-          pnpm install
+        run: pnpm install
 
       - name: Build Android
         run: |
