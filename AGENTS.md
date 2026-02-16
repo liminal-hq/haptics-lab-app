@@ -26,7 +26,7 @@ This repo is intended to be built by an autonomous coding agent. The following r
 
 - This is a `pnpm` workspace monorepo.
 - `app/haptics-lab/` contains the Tauri application.
-- `packages/tauri-plugin-haptics/` contains the plugin (Rust + Android Kotlin + JS guest bindings).
+- `plugin/tauri-plugin-haptics/` contains the plugin (Rust + Android Kotlin + JS guest bindings).
 - `docs/` contains repo-level documentation.
 
 ### Best practices

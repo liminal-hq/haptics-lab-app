@@ -29,7 +29,7 @@ Alternatively, use the provided Devcontainer which has everything pre-installed.
 
 ## Plugin
 
-The haptics plugin source code is located in `packages/tauri-plugin-haptics`.
+The haptics plugin source code is located in `plugin/tauri-plugin-haptics`.
 It includes:
 - Rust core logic
 - Android Kotlin implementation

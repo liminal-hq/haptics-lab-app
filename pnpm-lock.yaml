@@ -43,7 +43,7 @@ importers:
         version: 11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4)
       '@liminal-hq/plugin-haptics':
         specifier: workspace:*
-        version: link:../../packages/tauri-plugin-haptics/guest-js
+        version: link:../../plugin/tauri-plugin-haptics/guest-js
       '@liminal-hq/plugin-material-you':
         specifier: ^0.1.2
         version: 0.1.2
@@ -82,7 +82,7 @@ importers:
         specifier: ^7.0.4
         version: 7.3.1
 
-  packages/tauri-plugin-haptics/guest-js:
+  plugin/tauri-plugin-haptics/guest-js:
     dependencies:
       '@tauri-apps/api':
         specifier: ^2.0.0

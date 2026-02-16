@@ -2,5 +2,5 @@
 resolver = "2"
 members = [
   "app/haptics-lab/src-tauri",
-  "packages/tauri-plugin-haptics",
+  "plugin/tauri-plugin-haptics",
 ]

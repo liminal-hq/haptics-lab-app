@@ -1036,7 +1036,7 @@ commands = ["stop"]
 ```toml
 [dependencies]
 ta u r i = { version = "2" }
-ta u r i-plugin-haptics = { path = "../packages/tauri-plugin-haptics" }
+ta u r i-plugin-haptics = { path = "../plugin/tauri-plugin-haptics" }
 ```
 
 ## `src-tauri/src/lib.rs`

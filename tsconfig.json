@@ -2,6 +2,6 @@
   "files": [],
   "references": [
     { "path": "./app/haptics-lab" },
-    { "path": "./packages/tauri-plugin-haptics/guest-js" }
+    { "path": "./plugin/tauri-plugin-haptics/guest-js" }
   ]
 }

@@ -68,7 +68,7 @@ Single repo, with pnpm workspaces and a small Rust workspace:
 
 Notes:
 
-- `packages/tauri-plugin-haptics` contains the full plugin: Rust core, Android Kotlin implementation, and the JS guest bindings consumed by the React UI.
+- `plugin/tauri-plugin-haptics` contains the full plugin: Rust core, Android Kotlin implementation, and the JS guest bindings consumed by the React UI.
 - The app lives under `app/haptic-lab/` (with `app/haptic-lab/src/` and `app/haptic-lab/src-tauri/`) so the repo can host other apps later..
 
 # Build phases (the order the AI should execute)
@@ -134,7 +134,7 @@ The devcontainer provides most of this automatically.
 
 ```yaml
 packages:
-  - "packages/*"
+  - "plugin/*"
 ```
 
 ## Root `package.json` (scripts)
@@ -248,7 +248,7 @@ Create a root `Cargo.toml` workspace so CI can run `cargo test --workspace`:
 resolver = "2"
 members = [
   "src-tauri",
-  "packages/tauri-plugin-haptics"
+  "plugin/tauri-plugin-haptics"
 ]
 ```
 
@@ -266,7 +266,7 @@ edition = "2021"
 ta u r i = { version = "2" }
 
 # Local plugin
- ta u r i-plugin-haptics = { path = "../packages/tauri-plugin-haptics" }
+ ta u r i-plugin-haptics = { path = "../plugin/tauri-plugin-haptics" }
 
 # Material You plugin (choose one):
 # A) crates.io
@@ -304,7 +304,7 @@ Key decisions for MVP:
 
 # JS guest bindings (package)
 
-The JS guest bindings live inside the plugin at `packages/tauri-plugin-haptics/guest-js` and should publish as `@liminal-hq/plugin-haptics`.
+The JS guest bindings live inside the plugin at `plugin/tauri-plugin-haptics/guest-js` and should publish as `@liminal-hq/plugin-haptics`.
 
 Minimal `guest-js/package.json`:
 
@@ -386,7 +386,7 @@ Suggested folders:
 
 ## Rust
 
-- Unit tests in `packages/tauri-plugin-haptics/src/`:
+- Unit tests in `plugin/tauri-plugin-haptics/src/`:
   - `validate_and_clamp(req, cfg)` behaviour
   - repeat safety
   - amplitude clamping
@@ -577,7 +577,7 @@ Must include:
 - Where the plugin lives
 - How to run tests: `pnpm ci`
 
-## `packages/tauri-plugin-haptics/README.md`
+## `plugin/tauri-plugin-haptics/README.md`
 
 Must include:
 
@@ -614,7 +614,7 @@ This repo is intended to be built by an autonomous coding agent. The following r
 
 - This is a `pnpm` workspace monorepo.
 - `app/haptic-lab/` contains the Tauri application.
-- `packages/tauri-plugin-haptics/` contains the plugin (Rust + Android Kotlin + JS guest bindings).
+- `plugin/tauri-plugin-haptics/` contains the plugin (Rust + Android Kotlin + JS guest bindings).
 - `docs/` contains repo-level documentation.
 
 ### Best practices
