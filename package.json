@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "pnpm -C app/haptics-lab dev",
+    "prebuild": "pnpm -C plugin/tauri-plugin-haptics/guest-js build",
     "build": "pnpm -C app/haptics-lab build",
     "preview": "pnpm -C app/haptics-lab preview",
     "tauri": "pnpm -C app/haptics-lab tauri",

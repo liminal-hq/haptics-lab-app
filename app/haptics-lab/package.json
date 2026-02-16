@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "pnpm -C ../../plugin/tauri-plugin-haptics/guest-js build",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri"
