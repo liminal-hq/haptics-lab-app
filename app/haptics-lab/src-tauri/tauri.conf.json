@@ -42,7 +42,7 @@
 			"stopBeforePlay": true,
 			"maxDurationMs": 10000,
 			"maxAmplitude": 255,
-			"allowRepeatingWaveforms": false
+			"allowRepeatingWaveforms": true
 		}
 	}
 }

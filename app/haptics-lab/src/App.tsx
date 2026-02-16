@@ -20,6 +20,17 @@ function App() {
 	const [timings, setTimings] = useState<string>('0, 50, 50, 100');
 	const [amplitudes, setAmplitudes] = useState<string>('0, 128, 0, 255');
 	const [repeat, setRepeat] = useState<number>(-1);
+	const timingsArr = timings
+		.split(',')
+		.map((s) => parseInt(s.trim()))
+		.filter((n) => !isNaN(n));
+	const repeatMax = Math.max(0, timingsArr.length - 1);
+
+	useEffect(() => {
+		if (repeat > repeatMax) {
+			setRepeat(-1);
+		}
+	}, [repeat, repeatMax]);
 
 	useEffect(() => {
 		haptics
@@ -59,10 +70,6 @@ function App() {
 
 	const playWaveform = async () => {
 		try {
-			const timingsArr = timings
-				.split(',')
-				.map((s) => parseInt(s.trim()))
-				.filter((n) => !isNaN(n));
 			const amplitudesArr = amplitudes
 				.split(',')
 				.map((s) => parseInt(s.trim()))
@@ -166,11 +173,13 @@ function App() {
 					/>
 
 					<Box>
-						<Typography gutterBottom>Repeat Index (-1 to disable)</Typography>
+						<Typography gutterBottom>
+							Repeat Index (-1 to disable, 0-{repeatMax} to loop)
+						</Typography>
 						<Slider
 							value={repeat}
 							min={-1}
-							max={10}
+							max={repeatMax}
 							step={1}
 							marks
 							valueLabelDisplay="auto"
