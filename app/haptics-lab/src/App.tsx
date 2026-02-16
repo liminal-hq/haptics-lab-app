@@ -114,7 +114,10 @@ function App() {
 	};
 
 	return (
-		<Container maxWidth="sm" sx={{ py: 4 }}>
+		<Container
+			maxWidth="sm"
+			sx={{ pt: 'calc(env(safe-area-inset-top, 0px) + 16px)', pb: 4 }}
+		>
 			<Typography variant="h4" gutterBottom>
 				Haptics Lab
 			</Typography>
