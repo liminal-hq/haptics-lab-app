@@ -17,6 +17,8 @@
     "android:init": "pnpm --filter haptics-lab tauri android init",
     "android:dev": "pnpm --filter haptics-lab tauri android dev",
     "android:build": "pnpm --filter haptics-lab tauri android build",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
     "lint": "eslint .",
     "typecheck": "tsc -b",
     "test": "vitest run",
