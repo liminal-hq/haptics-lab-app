@@ -15,6 +15,7 @@ This repository is built largely by autonomous coding agents. The rules below ar
 - [Git Workflow](#git-workflow)
 - [Local Tooling](#local-tooling)
 - [Logging](#logging)
+- [CI and Android Builds](#ci-and-android-builds)
 - [Frontend Code Conventions](#frontend-code-conventions)
 - [Documentation](#documentation)
 - [Repository Layout](#repository-layout)
@@ -25,7 +26,7 @@ This repository is built largely by autonomous coding agents. The rules below ar
 
 ## Project Status
 
-Haptics Lab is an early-stage Tauri v2 app for exploring, authoring and replaying haptic patterns on Android, built on a purpose-written `tauri-plugin-haptics`. The plugin plays one-shot, waveform, predefined, composition and (Android 16 / API 36+) envelope effects, and reports device capabilities. The app UI is intentionally small: capabilities readout, one-shot and click buttons, a waveform editor and an envelope editor. Composition editing, a pattern library and import/export are still to come. See `SPEC.md` and `docs/` for the plan.
+Haptics Lab is an early-stage Tauri v2 app for exploring, authoring and replaying haptic patterns on Android, built on a purpose-written `tauri-plugin-haptics`. The plugin plays one-shot, waveform, predefined, composition and (Android 16 / API 36+) envelope effects, and reports device capabilities. The app opens on a short splash (the animated app icon with a matching vibration) and then shows a small UI: capabilities readout, one-shot and click buttons, a waveform editor and an envelope editor. Composition editing, a pattern library and import/export are still to come. See `SPEC.md` and `docs/` for the plan.
 
 ## Localization and Spelling
 
@@ -107,6 +108,9 @@ Haptics Lab is an early-stage Tauri v2 app for exploring, authoring and replayin
 - **Do not push** (especially force-push), push tags, or dispatch workflows unless the user explicitly asks. Approval to push one branch does not extend to others.
 - Keep changes small and reviewable; prefer incremental, PR-sized commits. Split implementation, validation and docs into separate contextual commits when natural.
 - Branch names: `feat/<short-description>`, `docs/<short-description>`, `chore/<short-description>`; for fixes, `fix/issue-<number>-<short-description>`.
+- **Updating a PR branch is always a rebase.** Bring a branch up to date with `git rebase origin/main`; never merge `main` (or any other branch) into a feature branch. Pushing the rewritten branch needs `git push --force-with-lease`, which is fine on your own open PR branches once the user has asked for the push — never plain `--force`, and never force-push `main`.
+- **Stacked PRs:** record the base branch's tip before rebasing it, then move the next branch with `git rebase --onto <new-base> <old-base-tip> <branch>`. When the base PR merges, retarget the next PR to `main` and rebase it; git drops commits that are already in `main`.
+- **Landing a PR is always a merge commit** (`gh pr merge <number> --merge`), only when the user asks. Merge stacked PRs from the bottom up.
 - Prefer the `gh` CLI for repository, PR, label, review and Actions work.
 - Do not commit local planning or scratch files (for example `DEVCONTAINER_NEXT_PLAN.md`, `sample-error-images/`, `*.log`) unless asked.
 
@@ -120,11 +124,24 @@ Haptics Lab is an early-stage Tauri v2 app for exploring, authoring and replayin
 
 ## Logging
 
-Native and webview output share the `tauri-plugin-log` stream. `src/utils/logger.ts` forwards webview `console.*` into it, and `main.tsx` calls `setupLogger()` once at startup.
+Native and webview output share one `tauri-plugin-log` stream, configured in `src-tauri/src/lib.rs` (`Trace` in debug builds, `Info` in release; each line has a timestamp, level and target). `src/services/logger.ts` redirects every webview `console.*` call into it, and `main.tsx` calls `initLogger('main')` once at startup. On Android the stream is visible in `adb logcat`.
 
+- `initLogger(windowLabel)` is a no-op outside a Tauri webview, is safe to call twice, prefixes each message with the window label, tags it with the real caller file and line, and never lets a failing bridge call surface as an unhandled rejection. `console.log` forwards as `info`.
+- Every window entry calls `initLogger(label)` once; a new window kind must too.
 - Use `log::{trace,debug,info,warn,error}!` in Rust, `Log.*` in Kotlin and `console.*` in the front end. Do not add a second logging path.
-- Never log secrets or credentials.
-- Each window's capabilities must include `log:default`, or forwarding fails silently.
+- Never log secrets, credentials or full file contents.
+- Each window must be granted `log:default`, which `capabilities/logging.json` does; add new windows to its `windows` list, or forwarding fails silently.
+
+## CI and Android Builds
+
+CI follows the Liminal HQ house pipeline and runs in the shared images (`ghcr.io/liminal-hq/tauri-ci-desktop` and `tauri-ci-mobile`), which keep `RUSTUP_HOME` and `CARGO_HOME` under `/usr/local` so `cargo` works in GitHub container jobs.
+
+- **`ci.yml`** runs lint, typecheck, tests, `cargo fmt`, `cargo clippy` and `cargo test` on every PR and push to `main`.
+- **`android.yml`** compiles a release build on every PR and uploads the unsigned APK. It proves the Android build works; the file cannot be installed as is.
+- **`android-apk.yml`** is the installable build. It is manual: `gh workflow run android-apk.yml --ref <branch>` builds an arm64 debug APK and uploads it as the `haptics-lab-debug-apk` artifact for 14 days. Add `-f publish_draft_release=true` to also attach it to a draft pre-release for a direct phone download. The workflow file must exist on `main` for `workflow_dispatch` to find it.
+- **Stable debug key:** the `ANDROID_DEBUG_KEYSTORE_BASE64` repository secret holds the debug keystore, restored into `ANDROID_USER_HOME` so every CI build is signed with the same key and installs over the previous one. The job summary prints the signing certificate's SHA-256 digest to check against. Without the secret each build gets a throwaway key and the previous install must be removed first.
+- **Installing:** `gh run download <run-id> -n haptics-lab-debug-apk`, then `adb install -r <file>.apk`.
+- Android launcher icons are generated into the git-ignored `gen/android` project, so builds run `pnpm icons` after `android:init`.
 
 ## Frontend Code Conventions
 

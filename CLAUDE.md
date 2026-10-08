@@ -8,7 +8,7 @@ Haptics Lab is a Tauri v2 app for exploring, authoring and replaying haptic patt
 
 ## Status
 
-Early development. The plugin plays one-shot, waveform, predefined, composition and envelope (API 36+) effects and reports capabilities. The app has a capabilities readout, one-shot and click buttons, a waveform editor with repeat, and an envelope editor. Composition editing, a pattern library and import/export are not built yet. Kotlin changes are only verifiable under JDK 17 and on a device — say so in PR test plans when you couldn't.
+Early development. The plugin plays one-shot, waveform, predefined, composition and envelope (API 36+) effects and reports capabilities. The app opens on a short splash (animated icon plus a matching vibration), then shows a capabilities readout, one-shot and click buttons, a waveform editor with repeat, and an envelope editor. Composition editing, a pattern library and import/export are not built yet. Kotlin changes are verified by the CI Android build (JDK 17) and on a device — say so in PR test plans when you couldn't. The test phone, a Pixel 8 Pro, has no envelope support in its vibrator hardware, so envelope playback falls back there.
 
 ## Layout
 
@@ -27,6 +27,7 @@ pnpm workspace plus Cargo workspace; `AGENTS.md`'s [Repository Layout](AGENTS.md
 - `pnpm ci` — the local gate that mirrors CI: `format:check`, `lint`, `typecheck`, `test`, `rust:fmt`, `rust:clippy`, `rust:test`. Must pass before opening or updating a PR.
 - `pnpm format` — Prettier write. `pnpm test` — Vitest.
 - `cd app/haptics-lab/src-tauri/gen/android && ./gradlew :tauri-plugin-haptics:compileDebugKotlin` — compile the plugin's Kotlin (JDK 17).
+- `gh workflow run android-apk.yml --ref <branch>` — build an installable debug APK in CI (add `-f publish_draft_release=true` for a download link), then `gh run download <run-id> -n haptics-lab-debug-apk` and `adb install -r <file>.apk`. Builds share one stable debug key, so they update in place.
 
 ## Architecture — the key things to understand
 
@@ -35,7 +36,8 @@ pnpm workspace plus Cargo workspace; `AGENTS.md`'s [Repository Layout](AGENTS.md
 - **Safety defaults.** Repeating waveforms are opt-in via config, duration and amplitude are capped, and Stop is always wired.
 - **Envelope amplitude is 0–1** (unlike waveform amplitude, 0–255), with frequencies bounded by the device frequency profile.
 - **Pure logic out of components.** Validation and payload building live in `src/utils/` with unit tests.
-- **Capabilities ACL.** New plugin commands need `permissions/default.toml` entries and a grant in `src-tauri/capabilities/`, or `invoke()` silently fails.
+- **Capabilities ACL.** New plugin commands need `permissions/default.toml` entries and a grant in `src-tauri/capabilities/`, or `invoke()` silently fails. Logging forwarding needs `log:default`, granted in `capabilities/logging.json`.
+- **One log stream.** `services/logger.ts` (`initLogger('main')`) forwards webview `console.*` into `tauri-plugin-log`; `console.log` maps to `info`. See `AGENTS.md` → Logging.
 
 ## Conventions (from AGENTS.md)
 
@@ -47,6 +49,6 @@ pnpm workspace plus Cargo workspace; `AGENTS.md`'s [Repository Layout](AGENTS.md
 - **Em dashes**: use a real `—`, never `--` as a substitute (not for CLI flags).
 - **Authoring voice**: write comments, docs and PR text as the author of the artifact — no "this PR", reviewer names or commit SHAs. Commit messages are the exception.
 - **No barrel files**: import from the defining file.
-- **Git**: never push (especially force-push), push tags or dispatch workflows unless explicitly asked; prefer the `gh` CLI. Don't commit scratch files (`*.log`, `DEVCONTAINER_NEXT_PLAN.md`, `sample-error-images/`).
+- **Git**: never push (especially force-push), push tags or dispatch workflows unless explicitly asked; prefer the `gh` CLI. **Update PR branches by rebasing** (`git rebase origin/main`, `--onto` for stacks), never by merging `main` in; push rewritten branches with `--force-with-lease`. **Land PRs with merge commits** (`gh pr merge --merge`). Don't commit scratch files (`*.log`, `DEVCONTAINER_NEXT_PLAN.md`, `sample-error-images/`).
 
 Keep this file and `AGENTS.md` in sync: when a convention changes there, update the summary here in the same PR.
