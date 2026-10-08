@@ -46,6 +46,9 @@ jobs:
       - name: Initialise Android project
         run: pnpm android:init --ci
 
+      - name: Generate app icons
+        run: pnpm icons
+
       - name: Build debug APK
         id: build
         run: pnpm android:build --debug --target aarch64 --apk
