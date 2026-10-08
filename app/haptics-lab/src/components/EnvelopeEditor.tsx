@@ -1,3 +1,8 @@
+// Editor for authoring and playing envelope waveform effects
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0
+
 import { useMemo, useState } from 'react';
 import { Alert, Box, Button, IconButton, Paper, Stack, TextField, Typography } from '@mui/material';
 import * as haptics from '@liminal-hq/plugin-haptics';

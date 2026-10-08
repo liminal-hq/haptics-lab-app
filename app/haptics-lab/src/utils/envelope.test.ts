@@ -1,3 +1,8 @@
+// Unit tests for envelope row validation and payload building
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0
+
 import { describe, it, expect } from 'vitest';
 import { buildEnvelope, defaultEnvelopeRows } from './envelope';
 

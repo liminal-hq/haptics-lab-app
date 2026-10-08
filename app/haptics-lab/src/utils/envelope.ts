@@ -1,3 +1,8 @@
+// Envelope editor row parsing and validation against device limits
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0
+
 import type { Capabilities, EnvelopeWaveform } from '@liminal-hq/plugin-haptics';
 
 export type EnvelopeRow = { amplitude: string; frequencyHz: string; durationMs: string };
