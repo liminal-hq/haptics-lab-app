@@ -36,15 +36,12 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
 # Install Node.js 20.x
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
-    && npm install -g pnpm
+    && npm install -g bun
 
 # Switch to non-root user 'vscode' (provided by base image)
 USER vscode
 ENV HOME=/home/vscode
 ENV EDITOR=vim
-
-# Configure pnpm global bin path
-ENV PNPM_HOME=$HOME/.local/share/pnpm
 
 # Configure Rust paths
 ENV RUSTUP_HOME=$HOME/.rustup
@@ -57,8 +54,8 @@ ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 ENV ANDROID_HOME=$HOME/Android/Sdk
 ENV ANDROID_SDK_ROOT=$ANDROID_HOME
 
-# Update PATH to include pnpm, cargo, Java, and Android tools
-ENV PATH=$PNPM_HOME:$CARGO_HOME/bin:$JAVA_HOME/bin:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools/36.0.0:$PATH
+# Update PATH to include cargo, Java, and Android tools
+ENV PATH=$CARGO_HOME/bin:$JAVA_HOME/bin:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools/36.0.0:$PATH
 
 # Install Android SDK Command Line Tools
 RUN mkdir -p $ANDROID_HOME/cmdline-tools && \
@@ -95,5 +92,3 @@ RUN cargo install tauri-cli \
 # Default to portable AppImage format to avoid EGL issues on modern distros
 ENV TAURI_BUNDLER_NEW_APPIMAGE_FORMAT=true
 
-# Create pnpm home directory to ensure permissions are correct
-RUN mkdir -p $PNPM_HOME
