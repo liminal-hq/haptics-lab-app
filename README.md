@@ -25,6 +25,7 @@ Alternatively, use the provided Devcontainer which has everything pre-installed.
 | `pnpm android:init`  | Initialize the Android project (first run). |
 | `pnpm android:dev`   | Run the app on an Android device/emulator.  |
 | `pnpm android:build` | Build the Android APK/AAB.                  |
+| `pnpm icons`         | Regenerate app icons from `assets/icon`.    |
 | `pnpm ci`            | Run linting, typechecking, and tests.       |
 
 ## Plugin
