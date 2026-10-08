@@ -24,10 +24,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Build Android
-        run: |
-          bun run android:init
-          bun run icons
-          bun run android:build
+        run: bun run android:build
 
       - name: Upload APK
         uses: actions/upload-artifact@v6
