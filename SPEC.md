@@ -13,7 +13,7 @@ The primary goals are:
 
 ## Repo Layout
 
-The repository is a `pnpm` workspace monorepo with the following structure:
+The repository is a Bun workspace monorepo with the following structure:
 
 ```
 .
@@ -29,8 +29,8 @@ The repository is a `pnpm` workspace monorepo with the following structure:
 │       └── src/                # Rust core logic
 ├── AGENTS.md                   # Rules for autonomous agents
 ├── SPEC.md                     # This specification file
-├── pnpm-workspace.yaml         # Workspace definition
-└── package.json                # Root package configuration
+├── bun.lock                    # Dependency lockfile
+└── package.json                # Root package configuration and workspaces
 ```
 
 ## Plugin API Surface
@@ -86,15 +86,15 @@ The UI uses Material UI (MUI) and integrates with Android's Material You dynamic
 
 ## Build Commands
 
-| Command              | Description                                 |
-| :------------------- | :------------------------------------------ |
-| `pnpm install`       | Install dependencies for all packages.      |
-| `pnpm tauri:dev`     | Run the desktop development server.         |
-| `pnpm android:init`  | Initialize the Android project (first run). |
-| `pnpm android:dev`   | Run the app on an Android device/emulator.  |
-| `pnpm android:build` | Build the Android APK/AAB.                  |
-| `pnpm ci`            | Run linting, typechecking, and tests.       |
-| `pnpm rust:test`     | Run Rust unit tests.                        |
+| Command                 | Description                                 |
+| :---------------------- | :------------------------------------------ |
+| `bun install`           | Install dependencies for all packages.      |
+| `bun run tauri:dev`     | Run the desktop development server.         |
+| `bun run android:init`  | Initialize the Android project (first run). |
+| `bun run android:dev`   | Run the app on an Android device/emulator.  |
+| `bun run android:build` | Build the Android APK/AAB.                  |
+| `bun run validate`      | Run linting, typechecking, and tests.       |
+| `bun run rust:test`     | Run Rust unit tests.                        |
 
 ## Testing Strategy
 

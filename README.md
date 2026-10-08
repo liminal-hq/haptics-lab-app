@@ -8,12 +8,12 @@ A Tauri v2 application for exploring, authoring, and replaying haptic patterns o
 
 ## Quickstart
 
-This repo is configured as a `pnpm` monorepo.
+This repo is configured as a Bun monorepo.
 
 ### Prerequisites
 
 - Node.js 20+
-- pnpm 10+
+- Bun 1.3+
 - Rust stable
 - Android SDK + NDK + JDK 17
 - Tauri system dependencies (webkit2gtk, etc.)
@@ -22,15 +22,15 @@ Alternatively, use the provided Devcontainer which has everything pre-installed.
 
 ### Commands
 
-| Command              | Description                                 |
-| :------------------- | :------------------------------------------ |
-| `pnpm install`       | Install dependencies for all packages.      |
-| `pnpm tauri:dev`     | Run the desktop development server.         |
-| `pnpm android:init`  | Initialize the Android project (first run). |
-| `pnpm android:dev`   | Run the app on an Android device/emulator.  |
-| `pnpm android:build` | Build the Android APK/AAB.                  |
-| `pnpm icons`         | Regenerate app icons from `assets/icon`.    |
-| `pnpm ci`            | Run linting, typechecking, and tests.       |
+| Command                 | Description                                 |
+| :---------------------- | :------------------------------------------ |
+| `bun install`           | Install dependencies for all packages.      |
+| `bun run tauri:dev`     | Run the desktop development server.         |
+| `bun run android:init`  | Initialize the Android project (first run). |
+| `bun run android:dev`   | Run the app on an Android device/emulator.  |
+| `bun run android:build` | Build the Android APK/AAB.                  |
+| `bun run icons`         | Regenerate app icons from `assets/icon`.    |
+| `bun run validate`      | Run linting, typechecking, and tests.       |
 
 ## Plugin
 
@@ -46,5 +46,5 @@ It includes:
 Run all checks locally:
 
 ```bash
-pnpm ci
+bun run validate
 ```
