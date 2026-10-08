@@ -141,7 +141,7 @@ CI follows the Liminal HQ house pipeline and runs in the shared images (`ghcr.io
 - **`android-apk.yml`** is the installable build. It is manual: `gh workflow run android-apk.yml --ref <branch>` builds an arm64 debug APK and uploads it as the `haptics-lab-debug-apk` artifact for 14 days. Add `-f publish_draft_release=true` to also attach it to a draft pre-release for a direct phone download. The workflow file must exist on `main` for `workflow_dispatch` to find it.
 - **Stable debug key:** the `ANDROID_DEBUG_KEYSTORE_BASE64` repository secret holds the debug keystore, restored into `ANDROID_USER_HOME` so every CI build is signed with the same key and installs over the previous one. The job summary prints the signing certificate's SHA-256 digest to check against. Without the secret each build gets a throwaway key and the previous install must be removed first.
 - **Installing:** `gh run download <run-id> -n haptics-lab-debug-apk`, then `adb install -r <file>.apk`.
-- Android launcher icons are generated into the git-ignored `gen/android` project, so builds run `bun run icons` after `android:init`.
+- **The Android project is tracked in git.** `app/haptics-lab/src-tauri/gen/android` is committed, as in Cadence, so launcher icons and any native changes are reviewed like other code and CI builds do not run `android:init`. Only `gen/schemas` and the Gradle build outputs stay ignored. Regenerate it only when upgrading Tauri: run `bun run android:init`, then `bun run icons`, and review the diff.
 
 ## Frontend Code Conventions
 
