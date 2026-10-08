@@ -24,6 +24,7 @@ pnpm rust:test
 2. **Android**:
    - Connect a device.
    - Run `pnpm android:dev`.
+   - Watch the launch splash: the icon animates and the phone vibrates in time with its shake (about 480 ms, then still), then the home screen appears. Tapping the splash skips it and stops the vibration. On a device with envelope support the vibration is an envelope, otherwise a waveform.
    - Verify capabilities are detected.
    - Test "Play Click", "One Shot", and "Waveform" buttons.
    - Verify "Stop" cancels vibration immediately.

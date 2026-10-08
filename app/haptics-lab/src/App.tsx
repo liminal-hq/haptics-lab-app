@@ -12,10 +12,12 @@ import {
 } from '@mui/material';
 import * as haptics from '@liminal-hq/plugin-haptics';
 import EnvelopeEditor from './components/EnvelopeEditor';
+import SplashScreen from './components/SplashScreen';
 
 function App() {
 	const [caps, setCaps] = useState<haptics.Capabilities | null>(null);
 	const [error, setError] = useState<string | null>(null);
+	const [showSplash, setShowSplash] = useState(true);
 
 	// Waveform Editor State
 	const [timings, setTimings] = useState<string>('0, 50, 50, 100');
@@ -120,6 +122,10 @@ function App() {
 		navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
 		alert('Copied to clipboard!');
 	};
+
+	if (showSplash) {
+		return <SplashScreen onDone={() => setShowSplash(false)} />;
+	}
 
 	return (
 		<Container maxWidth="sm" sx={{ pt: 'calc(env(safe-area-inset-top, 0px) + 16px)', pb: 4 }}>
