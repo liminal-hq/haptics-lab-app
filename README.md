@@ -1,5 +1,9 @@
 # Haptics Lab
 
+<p align="center">
+  <img src="assets/hero.svg" alt="Haptics Lab — explore, author, and replay haptic patterns on Android" width="100%">
+</p>
+
 A Tauri v2 application for exploring, authoring, and replaying haptic patterns on Android devices.
 
 ## Quickstart
