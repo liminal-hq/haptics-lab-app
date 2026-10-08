@@ -20,7 +20,7 @@ jobs:
     name: Build debug APK (arm64)
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/${{ github.repository_owner }}/haptics-lab-ci-android:latest
+      image: ghcr.io/liminal-hq/tauri-ci-mobile:latest
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
