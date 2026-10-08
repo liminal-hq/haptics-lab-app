@@ -1,0 +1,103 @@
+name: Android Debug APK
+
+# Manually triggered build of an installable debug APK for on-device testing.
+# Run it against any branch: gh workflow run android-apk.yml --ref <branch>
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish_draft_release:
+        description: Also attach the APK to a draft pre-release for a direct phone download
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  build-apk:
+    name: Build debug APK (arm64)
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/${{ github.repository_owner }}/haptics-lab-ci-android:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    env:
+      DEBUG_KEYSTORE_BASE64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_BASE64 }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Restore stable debug keystore
+        if: env.DEBUG_KEYSTORE_BASE64 != ''
+        run: |
+          mkdir -p "$HOME/.android"
+          printf '%s' "$DEBUG_KEYSTORE_BASE64" | base64 -d > "$HOME/.android/debug.keystore"
+
+      - name: Restore Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Initialise Android project
+        run: pnpm android:init --ci
+
+      - name: Build debug APK
+        id: build
+        run: pnpm android:build --debug --target aarch64 --apk
+
+      - name: Locate APK
+        id: apk
+        run: |
+          apk="$(find app/haptics-lab/src-tauri/gen/android/app/build/outputs/apk -name '*.apk' | head -n 1)"
+          test -n "$apk"
+          echo "path=$apk" >> "$GITHUB_OUTPUT"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v6
+        with:
+          name: haptics-lab-debug-apk
+          path: ${{ steps.apk.outputs.path }}
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Summarise
+        run: |
+          {
+            echo "## Android debug APK"
+            echo "- **Ref:** \`${GITHUB_REF_NAME}\` at \`${GITHUB_SHA}\`"
+            echo "- **File:** \`$(basename '${{ steps.apk.outputs.path }}')\`"
+            if [ -z "$DEBUG_KEYSTORE_BASE64" ]; then
+              echo "- **Signing:** throwaway debug key — uninstall the previous build before installing this one, or set the \`ANDROID_DEBUG_KEYSTORE_BASE64\` secret for in-place updates"
+            else
+              echo "- **Signing:** stable debug key — installs over the previous build"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  publish-draft-release:
+    name: Attach APK to draft pre-release
+    if: inputs.publish_draft_release
+    needs: build-apk
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download APK
+        uses: actions/download-artifact@v6
+        with:
+          name: haptics-lab-debug-apk
+          path: apk
+
+      - name: Create draft pre-release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          gh release create "android-debug-${GITHUB_RUN_NUMBER}" apk/*.apk \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --draft --prerelease \
+            --title "Android debug build ${GITHUB_RUN_NUMBER} (${REF_NAME})" \
+            --notes "Debug APK built from \`${REF_NAME}\` at \`${GITHUB_SHA}\`. Unsigned for release; for on-device testing only."
