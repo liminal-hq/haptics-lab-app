@@ -27,7 +27,7 @@
 	},
 	"scripts": {
 		"build": "rollup -c",
-		"prepare": "pnpm build"
+		"prepare": "bun run build"
 	},
 	"files": [
 		"dist-js",

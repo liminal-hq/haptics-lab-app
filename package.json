@@ -2,22 +2,27 @@
 	"name": "haptics-lab-monorepo",
 	"private": true,
 	"type": "module",
-	"packageManager": "pnpm@10.29.3",
+	"packageManager": "bun@1.3.10",
+	"workspaces": [
+		"plugin/*",
+		"plugin/*/guest-js",
+		"app/*"
+	],
 	"engines": {
-		"node": "20.20.0"
+		"node": ">=20.19.0"
 	},
 	"scripts": {
-		"dev": "pnpm --filter haptics-lab dev",
-		"prebuild": "pnpm --filter @liminal-hq/plugin-haptics build",
-		"build": "pnpm --filter haptics-lab build",
-		"preview": "pnpm --filter haptics-lab preview",
-		"tauri": "pnpm --filter haptics-lab tauri",
-		"tauri:dev": "pnpm --filter haptics-lab tauri dev",
-		"tauri:build": "pnpm --filter haptics-lab tauri build",
-		"android:init": "pnpm --filter haptics-lab tauri android init",
-		"android:dev": "pnpm --filter haptics-lab tauri android dev",
-		"android:build": "pnpm --filter haptics-lab tauri android build",
-		"icons": "pnpm --filter haptics-lab tauri icon ../../assets/icon/icon-1024.png",
+		"dev": "bun run --filter haptics-lab dev",
+		"prebuild": "bun run --filter @liminal-hq/plugin-haptics build",
+		"build": "bun run --filter haptics-lab build",
+		"preview": "bun run --filter haptics-lab preview",
+		"tauri": "bun run --filter haptics-lab tauri",
+		"tauri:dev": "bun run --filter haptics-lab tauri dev",
+		"tauri:build": "bun run --filter haptics-lab tauri build",
+		"android:init": "bun run --filter haptics-lab tauri android init",
+		"android:dev": "bun run --filter haptics-lab tauri android dev",
+		"android:build": "bun run --filter haptics-lab tauri android build",
+		"icons": "bun run --filter haptics-lab tauri icon ../../assets/icon/icon-1024.png",
 		"format": "prettier . --write",
 		"format:check": "prettier . --check",
 		"lint": "eslint .",
@@ -26,7 +31,9 @@
 		"rust:fmt": "cargo fmt --all --check",
 		"rust:clippy": "cargo clippy --workspace --all-targets --all-features -- -D warnings",
 		"rust:test": "cargo test --workspace",
-		"ci": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm rust:fmt && pnpm rust:clippy && pnpm rust:test"
+		"build:plugins": "bun run --filter @liminal-hq/plugin-haptics build && bun run --filter @liminal-hq/plugin-material-you build",
+		"postinstall": "bun run build:plugins",
+		"validate": "bun run format:check && bun run lint && bun run typecheck && bun run test && bun run rust:fmt && bun run rust:clippy && bun run rust:test"
 	},
 	"devDependencies": {
 		"@tauri-apps/cli": "^2.0.0",
