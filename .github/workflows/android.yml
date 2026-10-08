@@ -31,5 +31,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v6
         with:
-          name: app-release.apk
-          path: app/haptics-lab/src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk
+          name: app-release-unsigned-apk
+          path: app/haptics-lab/src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          if-no-files-found: error
