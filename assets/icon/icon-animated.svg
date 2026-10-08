@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-labelledby="t d">
+  <title id="t">Phone Buzz (animated)</title>
+  <desc id="d">A phone handset buzzing, with vibration arcs pulsing outward from both sides and a pulse trace redrawing on its screen.</desc>
+  <defs>
+    <linearGradient id="bgG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0a1020"/><stop offset="0.55" stop-color="#050507"/><stop offset="1" stop-color="#0A0A0D"/></linearGradient>
+    <radialGradient id="glow" cx="512" cy="512" r="460" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#f43f5e" stop-opacity="0.22"/><stop offset="0.55" stop-color="#ffaa40" stop-opacity="0.07"/><stop offset="1" stop-color="#ffaa40" stop-opacity="0"/></radialGradient>
+    <linearGradient id="brand" x1="170" y1="512" x2="854" y2="512" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#ffaa40"/><stop offset="0.5" stop-color="#f43f5e"/><stop offset="1" stop-color="#a78bfa"/></linearGradient>
+    <linearGradient id="brandV" x1="512" y1="190" x2="512" y2="834" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#ffaa40"/><stop offset="0.5" stop-color="#f43f5e"/><stop offset="1" stop-color="#a78bfa"/></linearGradient>
+    <linearGradient id="brandD" x1="190" y1="190" x2="834" y2="834" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#ffaa40"/><stop offset="0.5" stop-color="#f43f5e"/><stop offset="1" stop-color="#a78bfa"/></linearGradient>
+    <filter id="blur" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="22"/></filter>
+  </defs>
+  <g id="background">
+    <rect width="1024" height="1024" fill="url(#bgG)"/>
+    <rect width="1024" height="1024" fill="url(#glow)"/>
+  </g>
+  <g id="foreground">
+    <path d="M300.0 644.5 A250 250 0 0 1 300.0 379.5" fill="none" stroke="url(#brand)" stroke-width="40" stroke-linecap="round" opacity="1"><animate attributeName="opacity" values="1;1;0.3;1" keyTimes="0;0.2;0.6;1" dur="1.6s" repeatCount="indefinite"/></path>
+    <path d="M240.6 681.6 A320 320 0 0 1 240.6 342.4" fill="none" stroke="url(#brand)" stroke-width="40" stroke-linecap="round" opacity="0.55"><animate attributeName="opacity" values="0.55;0.55;1;0.15;0.55" keyTimes="0;0.2;0.4;0.8;1" dur="1.6s" repeatCount="indefinite"/></path>
+    <path d="M724.0 379.5 A250 250 0 0 1 724.0 644.5" fill="none" stroke="url(#brand)" stroke-width="40" stroke-linecap="round" opacity="1"><animate attributeName="opacity" values="1;1;0.3;1" keyTimes="0;0.2;0.6;1" dur="1.6s" repeatCount="indefinite"/></path>
+    <path d="M783.4 342.4 A320 320 0 0 1 783.4 681.6" fill="none" stroke="url(#brand)" stroke-width="40" stroke-linecap="round" opacity="0.55"><animate attributeName="opacity" values="0.55;0.55;1;0.15;0.55" keyTimes="0;0.2;0.4;0.8;1" dur="1.6s" repeatCount="indefinite"/></path>
+    <g>
+      <animateTransform attributeName="transform" type="translate" values="0 0;-7 0;7 0;-5 0;5 0;0 0;0 0" keyTimes="0;0.06;0.12;0.18;0.24;0.3;1" dur="1.6s" repeatCount="indefinite"/>
+    <rect x="392" y="262" width="240" height="500" rx="56" fill="#0A0A0D" stroke="url(#brandV)" stroke-width="36"/>
+    <rect x="472" y="312" width="80" height="22" rx="11" fill="#F7E2BA" opacity="0.8"/>
+    <path d="M440 512 h30 l24 -64 l36 128 l24 -64 h30" fill="none" stroke="#F7E2BA" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="332" stroke-dashoffset="0">
+      <animate attributeName="stroke-dashoffset" values="0;0;332;0;0" keyTimes="0;0.35;0.4;0.75;1" dur="1.6s" repeatCount="indefinite"/>
+    </path>
+    </g>
+  </g>
+</svg>
