@@ -11,6 +11,7 @@ import {
 	Box,
 } from '@mui/material';
 import * as haptics from '@liminal-hq/plugin-haptics';
+import EnvelopeEditor from './components/EnvelopeEditor';
 
 function App() {
 	const [caps, setCaps] = useState<haptics.Capabilities | null>(null);
@@ -194,6 +195,8 @@ function App() {
 					</Stack>
 				</Stack>
 			</Paper>
+
+			<EnvelopeEditor caps={caps} onError={setError} />
 		</Container>
 	);
 }
