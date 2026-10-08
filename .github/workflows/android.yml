@@ -26,6 +26,7 @@ jobs:
       - name: Build Android
         run: |
           pnpm android:init
+          pnpm icons
           pnpm android:build
 
       - name: Upload APK

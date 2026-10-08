@@ -17,6 +17,7 @@
 		"android:init": "pnpm --filter haptics-lab tauri android init",
 		"android:dev": "pnpm --filter haptics-lab tauri android dev",
 		"android:build": "pnpm --filter haptics-lab tauri android build",
+		"icons": "pnpm --filter haptics-lab tauri icon ../../assets/icon/icon-1024.png",
 		"format": "prettier . --write",
 		"format:check": "prettier . --check",
 		"lint": "eslint .",
