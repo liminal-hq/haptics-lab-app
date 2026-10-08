@@ -43,7 +43,8 @@ export type Predefined = {
 // Android 16+ (API 36) only when supported.
 export type EnvelopeWaveform = {
 	type: 'envelopeWaveform';
-	initialFrequencyHz?: number;
+	initialFrequencyHz?: number; // must lie within envelopeInfo.frequencyProfile when present
+	// amplitude is 0..1; durationMs is per-segment and bounded by envelopeInfo
 	controlPoints: Array<{ amplitude: number; frequencyHz: number; durationMs: number }>;
 };
 

@@ -77,10 +77,12 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
     ) else false
     ret.put("compositionSupported", compositionSupported)
 
-    // Envelope effects are disabled here until this plugin is built with an API
-    // level that includes stable envelope APIs on all toolchains.
-    val envelopeSupported = false
+    // Envelope effects (API 36+); gated on device support
+    val envelopeSupported = envelopeEffectsSupported()
     ret.put("envelopeSupported", envelopeSupported)
+    if (envelopeSupported) {
+      envelopeInfo()?.let { ret.put("envelopeInfo", it) }
+    }
 
     // system setting (optional)
     val enabled = try {
@@ -254,15 +256,116 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
       }
 
       "envelopeWaveform" -> {
-        if (Build.VERSION.SDK_INT < 36) {
-          Triple(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK), true, "Envelope requires API 36+ and device support")
+        if (!envelopeEffectsSupported()) {
+          val reason = if (Build.VERSION.SDK_INT < 36) {
+            "Envelope requires API 36+ and device support"
+          } else {
+            "Device does not support envelope effects"
+          }
+          Triple(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK), true, reason)
         } else {
-          Triple(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK), true, "Envelope effect is temporarily disabled")
+          Triple(buildEnvelopeEffect(effectObj, maxDur), false, null)
         }
       }
 
       else -> throw IllegalArgumentException("Unknown effect type: $type")
     }
+  }
+
+  private fun envelopeEffectsSupported(): Boolean {
+    if (Build.VERSION.SDK_INT < 36) return false
+    return runCatching { vibrator.areEnvelopeEffectsSupported() }.getOrDefault(false)
+  }
+
+  private fun envelopeInfo(): JSObject? {
+    if (Build.VERSION.SDK_INT < 36) return null
+    return runCatching {
+      val info = vibrator.envelopeEffectInfo
+      val out = JSObject()
+      out.put("maxSize", info.maxSize)
+      out.put("minControlPointDurationMs", info.minControlPointDurationMillis)
+      out.put("maxControlPointDurationMs", info.maxControlPointDurationMillis)
+      out.put("maxDurationMs", info.maxDurationMillis)
+      val profile = vibrator.frequencyProfile
+      if (profile != null) {
+        val fp = JSObject()
+        fp.put("minHz", profile.minFrequencyHz.toDouble())
+        fp.put("maxHz", profile.maxFrequencyHz.toDouble())
+        out.put("frequencyProfile", fp)
+      }
+      out
+    }.getOrNull()
+  }
+
+  /**
+   * Builds a waveform envelope from `controlPoints` (amplitude 0..1, frequencyHz, durationMs).
+   * Validates against device limits so callers get a clear INVALID_EFFECT error.
+   */
+  private fun buildEnvelopeEffect(effectObj: JSObject, maxDur: Long): VibrationEffect {
+    if (Build.VERSION.SDK_INT < 36) throw IllegalStateException("Envelope requires API 36+")
+
+    val points = getArray(effectObj, "controlPoints", "control_points")
+    if (points.length() == 0) {
+      throw IllegalArgumentException("controlPoints cannot be empty")
+    }
+
+    val info = vibrator.envelopeEffectInfo
+    val profile = vibrator.frequencyProfile
+    if (points.length() > info.maxSize) {
+      throw IllegalArgumentException("controlPoints exceeds device maximum of ${info.maxSize}")
+    }
+
+    val builder = VibrationEffect.WaveformEnvelopeBuilder()
+    val initial = when {
+      effectObj.has("initialFrequencyHz") -> effectObj.getDouble("initialFrequencyHz")
+      effectObj.has("initial_frequency_hz") -> effectObj.getDouble("initial_frequency_hz")
+      else -> null
+    }
+    if (initial != null) {
+      builder.setInitialFrequencyHz(checkFrequency(initial.toFloat(), profile))
+    }
+
+    var total = 0L
+    for (i in 0 until points.length()) {
+      val p = getObject(points, i)
+      if (!p.has("amplitude")) throw IllegalArgumentException("controlPoints[$i]: missing amplitude")
+      val amplitude = p.getDouble("amplitude").toFloat()
+      if (amplitude.isNaN() || amplitude < 0f || amplitude > 1f) {
+        throw IllegalArgumentException("controlPoints[$i]: amplitude must be within 0..1")
+      }
+      val freq = checkFrequency(getDouble(p, "frequencyHz", "frequency_hz", i).toFloat(), profile)
+      val dur = getLong(p, "durationMs", "duration_ms")
+      if (dur < info.minControlPointDurationMillis || dur > info.maxControlPointDurationMillis) {
+        throw IllegalArgumentException(
+          "controlPoints[$i]: durationMs must be within " +
+            "${info.minControlPointDurationMillis}..${info.maxControlPointDurationMillis}"
+        )
+      }
+      total += dur
+      builder.addControlPoint(amplitude, freq, dur)
+    }
+
+    val limit = minOf(maxDur, info.maxDurationMillis)
+    if (total > limit) {
+      throw IllegalArgumentException("envelope duration ${total}ms exceeds limit of ${limit}ms")
+    }
+    return builder.build()
+  }
+
+  private fun checkFrequency(hz: Float, profile: android.os.vibrator.VibratorFrequencyProfile?): Float {
+    if (hz.isNaN() || hz <= 0f) throw IllegalArgumentException("frequencyHz must be positive")
+    if (profile != null && (hz < profile.minFrequencyHz || hz > profile.maxFrequencyHz)) {
+      throw IllegalArgumentException(
+        "frequencyHz $hz outside device range ${profile.minFrequencyHz}..${profile.maxFrequencyHz}"
+      )
+    }
+    return hz
+  }
+
+  private fun getDouble(obj: JSObject, primary: String, fallback: String, index: Int): Double {
+    if (obj.has(primary)) return obj.getDouble(primary)
+    if (obj.has(fallback)) return obj.getDouble(fallback)
+    throw IllegalArgumentException("controlPoints[$index]: missing field `$primary`")
   }
 
   private fun capWaveformDuration(timings: LongArray, maxDur: Long): LongArray {
