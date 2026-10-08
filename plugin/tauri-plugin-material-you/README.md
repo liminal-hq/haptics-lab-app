@@ -23,7 +23,7 @@ tauri-plugin-material-you = { git = "https://github.com/liminal-hq/tauri-plugins
 ### JavaScript
 
 ```bash
-pnpm add @liminal-hq/plugin-material-you
+bun add @liminal-hq/plugin-material-you
 # or
 npm add @liminal-hq/plugin-material-you
 # or

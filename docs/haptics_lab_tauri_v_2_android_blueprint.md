@@ -19,7 +19,7 @@ This is designed so an autonomous AI can take the repo from empty → fully work
 
 # Repo layout
 
-Single repo, with pnpm workspaces and a small Rust workspace:
+Single repo, with Bun workspaces and a small Rust workspace:
 
 ```
 .
@@ -59,8 +59,7 @@ Single repo, with pnpm workspaces and a small Rust workspace:
 ├─ AGENTS.md
 ├─ README.md
 ├─ package.json
-├─ pnpm-lock.yaml
-├─ pnpm-workspace.yaml
+├─ bun.lock
 ├─ tsconfig.json
 ├─ vite.config.ts
 └─ vitest.config.ts
@@ -75,7 +74,7 @@ Notes:
 
 ## Phase 0 — Bootstrap
 
-1. Create repo skeleton and initialise pnpm workspace
+1. Create repo skeleton and initialise the Bun workspace
 2. Generate Tauri v2 React template app
 3. Commit a “hello world” build that runs on desktop
 
@@ -122,7 +121,7 @@ Notes:
 
 The devcontainer provides most of this automatically.
 
-- Node 20 + pnpm
+- Node 20 + Bun
 - Rust stable + clippy/rustfmt
 - Android SDK + NDK
 - JDK 17
@@ -130,11 +129,14 @@ The devcontainer provides most of this automatically.
 
 # Workspace configuration
 
-## `pnpm-workspace.yaml`
+## Workspaces
 
-```yaml
-packages:
-  - 'plugin/*'
+Declared in the root `package.json` (there is no separate workspace file):
+
+```json
+{
+	"workspaces": ["plugin/*", "plugin/*/guest-js", "app/*"]
+}
 ```
 
 ## Root `package.json` (scripts)
@@ -143,7 +145,7 @@ packages:
 {
 	"name": "haptics-lab",
 	"private": true,
-	"packageManager": "pnpm@10.29.3",
+	"packageManager": "bun@1.3.10",
 	"scripts": {
 		"dev": "vite",
 		"build": "vite build",
@@ -165,7 +167,7 @@ packages:
 		"rust:clippy": "cargo clippy --workspace --all-targets --all-features -- -D warnings",
 		"rust:test": "cargo test --workspace",
 
-		"ci": "pnpm lint && pnpm typecheck && pnpm test && pnpm rust:fmt && pnpm rust:clippy && pnpm rust:test"
+		"ci": "bun run lint && bun run typecheck && bun run test && bun run rust:fmt && bun run rust:clippy && bun run rust:test"
 	},
 	"dependencies": {
 		"@mui/material": "^6.0.0",
@@ -207,8 +209,8 @@ Notes:
 	"productName": "Haptics Lab",
 	"identifier": "ca.liminalhq.hapticslab",
 	"build": {
-		"beforeDevCommand": "pnpm dev",
-		"beforeBuildCommand": "pnpm build",
+		"beforeDevCommand": "bun run dev",
+		"beforeBuildCommand": "bun run build",
 		"devUrl": "http://localhost:5173",
 		"frontendDist": "../dist"
 	},
@@ -404,14 +406,14 @@ Suggested folders:
 
 Runs fast checks on PRs:
 
-- pnpm install + cache
+- bun install + cache
 - lint + typecheck + vitest
 - cargo fmt/clippy/test
 
 Pseudo-contents:
 
-- Use `actions/setup-node` + `pnpm/action-setup`
-- Cache pnpm store
+- Use `oven-sh/setup-bun` (or the Bun in the shared CI image)
+- Cache the Bun install cache
 - Use `dtolnay/rust-toolchain` to install rust stable + components
 
 ## `.github/workflows/android.yml`
@@ -421,7 +423,7 @@ Runs Android build:
 - Setup JDK 17
 - Setup Android SDK + NDK
 - Install Rust android targets
-- `pnpm android:build`
+- `bun run android:build`
 - Upload APK/AAB artifacts
 
 # Devcontainer
@@ -430,7 +432,7 @@ Start from the provided Threshold devcontainer and tweak:
 
 - Rename the container.
 - Keep the Android + Rust toolchain.
-- Prefer the JS `@tauri-apps/cli` for `pnpm tauri ...`.
+- Prefer the JS `@tauri-apps/cli` for `bun run tauri ...`.
 - Add Rust Android targets in `postCreateCommand`.
 
 ## `.devcontainer/devcontainer.json`
@@ -452,7 +454,7 @@ Start from the provided Threshold devcontainer and tweak:
 			]
 		}
 	},
-	"postCreateCommand": "pnpm install && rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android"
+	"postCreateCommand": "bun install && rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android"
 }
 ```
 
@@ -502,15 +504,12 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
 # Install Node.js 20.x
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
-    && npm install -g pnpm
+    && npm install -g bun
 
 # Switch to non-root user 'vscode' (provided by base image)
 USER vscode
 ENV HOME=/home/vscode
 ENV EDITOR=vim
-
-# Configure pnpm global bin path
-ENV PNPM_HOME=$HOME/.local/share/pnpm
 
 # Configure Rust paths
 ENV RUSTUP_HOME=$HOME/.rustup
@@ -523,8 +522,8 @@ ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 ENV ANDROID_HOME=$HOME/Android/Sdk
 ENV ANDROID_SDK_ROOT=$ANDROID_HOME
 
-# Update PATH to include pnpm, cargo, Java, and Android tools
-ENV PATH=$PNPM_HOME:$CARGO_HOME/bin:$JAVA_HOME/bin:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools/36.0.0:$PATH
+# Update PATH to include cargo, Java, and Android tools
+ENV PATH=$CARGO_HOME/bin:$JAVA_HOME/bin:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools/36.0.0:$PATH
 
 # Install Android SDK Command Line Tools
 RUN mkdir -p $ANDROID_HOME/cmdline-tools && \
@@ -555,9 +554,6 @@ RUN cargo install tauri-cli \
 
 # Default to portable AppImage format to avoid EGL issues on modern distros
 ENV TAURI_BUNDLER_NEW_APPIMAGE_FORMAT=true
-
-# Create pnpm home directory to ensure permissions are correct
-RUN mkdir -p $PNPM_HOME
 ```
 
 # Readmes and agent instructions
@@ -569,13 +565,13 @@ Must include:
 - What the repo is
 - Prereqs (or “use the devcontainer”)
 - Commands:
-  - `pnpm install`
-  - `pnpm tauri:dev`
-  - `pnpm android:init`
-  - `pnpm android:dev -- --open`
-  - `pnpm android:build`
+  - `bun install`
+  - `bun run tauri:dev`
+  - `bun run android:init`
+  - `bun run android:dev -- --open`
+  - `bun run android:build`
 - Where the plugin lives
-- How to run tests: `pnpm ci`
+- How to run tests: `bun run validate`
 
 ## `plugin/tauri-plugin-haptics/README.md`
 
@@ -612,7 +608,7 @@ This repo is intended to be built by an autonomous coding agent. The following r
 
 ### Code organisation
 
-- This is a `pnpm` workspace monorepo.
+- This is a Bun workspace monorepo.
 - `app/haptic-lab/` contains the Tauri application.
 - `plugin/tauri-plugin-haptics/` contains the plugin (Rust + Android Kotlin + JS guest bindings).
 - `docs/` contains repo-level documentation.
@@ -673,15 +669,15 @@ Within `app/haptic-lab/src/`:
 
 1. Open in devcontainer
 2. Install deps:
-   - `pnpm install`
+   - `bun install`
 3. Desktop dev:
-   - `pnpm tauri:dev`
+   - `bun run tauri:dev`
 4. Add Android target:
-   - `pnpm android:init`
+   - `bun run android:init`
 5. Android dev:
-   - `pnpm android:dev -- --open`
+   - `bun run android:dev -- --open`
 6. Build Android:
-   - `pnpm android:build`
+   - `bun run android:build`
 
 # Definition of Done
 

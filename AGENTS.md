@@ -116,11 +116,11 @@ Haptics Lab is an early-stage Tauri v2 app for exploring, authoring and replayin
 
 ## Local Tooling
 
-- **Package manager:** `pnpm` workspaces. Node 20+, pnpm 10+, Rust stable, and the Android SDK, NDK and **JDK 17** for Android builds. Gradle 8.x does not run on newer JDKs; if only a newer JDK is installed, use the devcontainer or the shared `ghcr.io/liminal-hq/tauri-dev-mobile:latest` image.
+- **Package manager:** Bun workspaces. Node 20.19+, Bun 1.3+, Rust stable, and the Android SDK, NDK and **JDK 17** for Android builds. Gradle 8.x does not run on newer JDKs; if only a newer JDK is installed, use the devcontainer or the shared `ghcr.io/liminal-hq/tauri-dev-mobile:latest` image.
 - **Formatting:** Prettier (`.prettierrc`: tabs, single quotes, 100 columns, trailing commas). `.editorconfig` is authoritative.
-- **Validation gate:** `pnpm ci` (format check, ESLint, `tsc -b`, Vitest, `cargo fmt`, `cargo clippy -D warnings`, `cargo test`) must pass before opening or updating a PR. Run it, and report anything it could not run.
+- **Validation gate:** `bun run validate` (format check, ESLint, `tsc -b`, Vitest, `cargo fmt`, `cargo clippy -D warnings`, `cargo test`) must pass before opening or updating a PR. (The script is `validate`, not `ci`, because `bun ci` is a built-in Bun command that only installs from the lockfile.) Run it, and report anything it could not run.
 - **Android plugin changes:** also compile the Kotlin (`./gradlew :tauri-plugin-haptics:compileDebugKotlin` in `app/haptics-lab/src-tauri/gen/android`) and, where hardware allows, test on a device. If you cannot, say so in the PR test plan.
-- **Agent automation:** use `pnpm tauri:dev` to drive the desktop shell with the Tauri MCP tooling. Desktop has no vibrator, so haptics calls resolve with downgrade or no-op behaviour — real playback needs `pnpm android:dev` on a device.
+- **Agent automation:** use `bun run tauri:dev` to drive the desktop shell with the Tauri MCP tooling. Desktop has no vibrator, so haptics calls resolve with downgrade or no-op behaviour — real playback needs `bun run android:dev` on a device.
 
 ## Logging
 
@@ -141,7 +141,7 @@ CI follows the Liminal HQ house pipeline and runs in the shared images (`ghcr.io
 - **`android-apk.yml`** is the installable build. It is manual: `gh workflow run android-apk.yml --ref <branch>` builds an arm64 debug APK and uploads it as the `haptics-lab-debug-apk` artifact for 14 days. Add `-f publish_draft_release=true` to also attach it to a draft pre-release for a direct phone download. The workflow file must exist on `main` for `workflow_dispatch` to find it.
 - **Stable debug key:** the `ANDROID_DEBUG_KEYSTORE_BASE64` repository secret holds the debug keystore, restored into `ANDROID_USER_HOME` so every CI build is signed with the same key and installs over the previous one. The job summary prints the signing certificate's SHA-256 digest to check against. Without the secret each build gets a throwaway key and the previous install must be removed first.
 - **Installing:** `gh run download <run-id> -n haptics-lab-debug-apk`, then `adb install -r <file>.apk`.
-- Android launcher icons are generated into the git-ignored `gen/android` project, so builds run `pnpm icons` after `android:init`.
+- Android launcher icons are generated into the git-ignored `gen/android` project, so builds run `bun run icons` after `android:init`.
 
 ## Frontend Code Conventions
 
@@ -160,7 +160,7 @@ CI follows the Liminal HQ house pipeline and runs in the shared images (`ghcr.io
 
 ## Repository Layout
 
-pnpm workspace monorepo plus a Cargo workspace.
+Bun workspace monorepo plus a Cargo workspace.
 
 - `app/haptics-lab/` — the Tauri app: React and MUI frontend in `src/`, Rust shell in `src-tauri/`, capabilities in `src-tauri/capabilities/`.
 - `plugin/tauri-plugin-haptics/` — the haptics plugin: Rust core (`src/`), Android Kotlin (`android/`), TypeScript guest bindings (`guest-js/`) and permissions (`permissions/`).

@@ -12,7 +12,7 @@ Early development. The plugin plays one-shot, waveform, predefined, composition 
 
 ## Layout
 
-pnpm workspace plus Cargo workspace; `AGENTS.md`'s [Repository Layout](AGENTS.md#repository-layout) is authoritative.
+Bun workspace plus Cargo workspace; `AGENTS.md`'s [Repository Layout](AGENTS.md#repository-layout) is authoritative.
 
 - `app/haptics-lab/` — the Tauri app (React + MUI in `src/`, Rust shell and capabilities in `src-tauri/`).
 - `plugin/tauri-plugin-haptics/` — the plugin: `src/` Rust, `android/` Kotlin (`HapticsPlugin.kt`), `guest-js/` TypeScript, `permissions/`.
@@ -21,11 +21,11 @@ pnpm workspace plus Cargo workspace; `AGENTS.md`'s [Repository Layout](AGENTS.md
 
 ## Commands
 
-- `pnpm install` — install workspace dependencies.
-- `pnpm tauri:dev` — run the desktop shell (no vibrator; haptics downgrade or no-op).
-- `pnpm android:dev` / `pnpm android:build` — run or build on an Android device or emulator (needs JDK 17, SDK and NDK).
-- `pnpm ci` — the local gate that mirrors CI: `format:check`, `lint`, `typecheck`, `test`, `rust:fmt`, `rust:clippy`, `rust:test`. Must pass before opening or updating a PR.
-- `pnpm format` — Prettier write. `pnpm test` — Vitest.
+- `bun install` — install workspace dependencies.
+- `bun run tauri:dev` — run the desktop shell (no vibrator; haptics downgrade or no-op).
+- `bun run android:dev` / `bun run android:build` — run or build on an Android device or emulator (needs JDK 17, SDK and NDK).
+- `bun run validate` — the local gate that mirrors CI: `format:check`, `lint`, `typecheck`, `test`, `rust:fmt`, `rust:clippy`, `rust:test`. Must pass before opening or updating a PR.
+- `bun run format` — Prettier write. `bun run test` — Vitest.
 - `cd app/haptics-lab/src-tauri/gen/android && ./gradlew :tauri-plugin-haptics:compileDebugKotlin` — compile the plugin's Kotlin (JDK 17).
 - `gh workflow run android-apk.yml --ref <branch>` — build an installable debug APK in CI (add `-f publish_draft_release=true` for a download link), then `gh run download <run-id> -n haptics-lab-debug-apk` and `adb install -r <file>.apk`. Builds share one stable debug key, so they update in place.
 
