@@ -49,6 +49,11 @@ describe('splash haptics', () => {
 		}
 	});
 
+	it('falls back to the waveform when envelope limits are not reported', () => {
+		const caps = { ...baseCaps, envelopeSupported: true };
+		expect(splashEffect(caps).type).toBe('waveform');
+	});
+
 	it('falls back to the waveform when the device limits reject the envelope', () => {
 		const tooShort = { ...envelopeInfo, minControlPointDurationMs: 100 };
 		expect(splashEnvelope(tooShort)).toBeNull();

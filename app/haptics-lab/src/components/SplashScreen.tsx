@@ -40,7 +40,8 @@ export default function SplashScreen({ onDone }: Props) {
 			.capabilities()
 			.catch(() => null)
 			.then((caps) => {
-				if (cancelled) return;
+				// A tap can skip the splash before the capabilities arrive; never vibrate after that.
+				if (cancelled || finished.current) return;
 				return haptics.play({
 					usage: 'touch',
 					respectSystemSettings: true,

@@ -47,7 +47,8 @@ export function splashEnvelope(info: Capabilities['envelopeInfo']): EnvelopeWave
 
 /** Picks the richest effect the device supports, falling back to the plain waveform. */
 export function splashEffect(caps: Capabilities | null): EffectRequest['effect'] {
-	if (caps?.envelopeSupported) {
+	// Without the device's limits the envelope cannot be validated, so use the waveform.
+	if (caps?.envelopeSupported && caps.envelopeInfo) {
 		const envelope = splashEnvelope(caps.envelopeInfo);
 		if (envelope) return envelope;
 	}
