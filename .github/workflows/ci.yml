@@ -13,7 +13,7 @@ jobs:
   lint-and-test:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/${{ github.repository_owner }}/haptics-lab-ci-desktop:latest
+      image: ghcr.io/liminal-hq/tauri-ci-desktop:latest
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}

@@ -23,7 +23,10 @@ const mapMaterialYouToMui = (palettes: MaterialYouPalettes) =>
 		palette: {
 			mode: 'dark',
 			primary: {
-				main: getTone(palettes.primary, 80) ?? getTone(palettes.primary, 40) ?? fallbackTheme.palette.primary.main,
+				main:
+					getTone(palettes.primary, 80) ??
+					getTone(palettes.primary, 40) ??
+					fallbackTheme.palette.primary.main,
 				light: getTone(palettes.primary, 90) ?? fallbackTheme.palette.primary.light,
 				dark: getTone(palettes.primary, 70) ?? fallbackTheme.palette.primary.dark,
 				contrastText: getTone(palettes.primary, 20) ?? 'hsl(0 0% 0%)',

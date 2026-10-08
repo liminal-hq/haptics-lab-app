@@ -11,7 +11,11 @@ pub struct EffectRequest {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "camelCase", rename_all_fields = "camelCase")]
+#[serde(
+    tag = "type",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
 pub enum Effect {
     Oneshot {
         duration_ms: u64,
@@ -43,7 +47,11 @@ pub struct EnvelopePoint {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
+#[serde(
+    tag = "kind",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
 pub enum CompositionStep {
     Primitive {
         primitive: String,
@@ -142,8 +150,14 @@ mod tests {
 
         let value = serde_json::to_value(req).expect("serialize waveform request");
         assert_eq!(value["effect"]["type"], "waveform");
-        assert_eq!(value["effect"]["timingsMs"], serde_json::json!([0, 50, 50, 100]));
-        assert_eq!(value["effect"]["amplitudes"], serde_json::json!([0, 128, 0, 255]));
+        assert_eq!(
+            value["effect"]["timingsMs"],
+            serde_json::json!([0, 50, 50, 100])
+        );
+        assert_eq!(
+            value["effect"]["amplitudes"],
+            serde_json::json!([0, 128, 0, 255])
+        );
         assert_eq!(value["effect"]["repeat"], -1);
     }
 }

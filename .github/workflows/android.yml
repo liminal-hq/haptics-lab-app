@@ -13,7 +13,7 @@ jobs:
   build-android:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/${{ github.repository_owner }}/haptics-lab-ci-android:latest
+      image: ghcr.io/liminal-hq/tauri-ci-mobile:latest
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -31,5 +31,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v6
         with:
-          name: app-release.apk
-          path: app/haptics-lab/src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk
+          name: app-release-unsigned-apk
+          path: app/haptics-lab/src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          if-no-files-found: error
