@@ -204,6 +204,36 @@ describe('raw play', () => {
 	});
 });
 
+describe('native errors', () => {
+	it('wraps a rejected play call as INVALID_EFFECT with the native message', async () => {
+		invoke.mockImplementation(async (cmd: string) => {
+			if (cmd === 'plugin:haptics|capabilities') return caps;
+			throw 'Unknown predefined effect `pop`';
+		});
+		await expect(
+			api.play({ effect: { type: 'predefined', effectId: 'click' } }),
+		).rejects.toMatchObject({ code: 'INVALID_EFFECT', message: 'Unknown predefined effect `pop`' });
+		await expect(api.ui('tick')).rejects.toMatchObject({ code: 'INVALID_EFFECT' });
+	});
+});
+
+describe('playSteps', () => {
+	it('applies the master scale to every step and sends them to native', async () => {
+		api.setMasterScale(0.5);
+		await api.playSteps([
+			{ atMs: 0, request: { effect: { type: 'oneshot', durationMs: 20, amplitude: 200 } } },
+			{ atMs: 80, request: { effect: { type: 'oneshot', durationMs: 20, amplitude: 100 } } },
+		]);
+		const [cmd, args] = invoke.mock.calls.at(-1) ?? [];
+		expect(cmd).toBe('plugin:haptics|play_steps');
+		expect(
+			args.steps.map(
+				(s: { request: { effect: { amplitude: number } } }) => s.request.effect.amplitude,
+			),
+		).toEqual([100, 50]);
+	});
+});
+
 describe('stop and ui', () => {
 	it('cancels queued triggers and the motor', async () => {
 		await api.register('q', { ...click, policy: 'queue' });

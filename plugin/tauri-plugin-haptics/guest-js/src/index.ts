@@ -292,12 +292,25 @@ export async function play(req: EffectRequest): Promise<PlayResult> {
 	return sendPlay(scaled(req));
 }
 
+/**
+ * Hardware limits never make a play call reject, so a rejection means the native side refused the
+ * input. Native errors arrive as plain strings; wrap them so callers always get `{ code, message }`.
+ */
+async function invalidInput<T>(call: Promise<T>): Promise<T> {
+	try {
+		return await call;
+	} catch (err) {
+		if (err instanceof HapticsError) throw err;
+		throw new HapticsError('INVALID_EFFECT', err instanceof Error ? err.message : String(err));
+	}
+}
+
 function sendPlay(req: EffectRequest): Promise<PlayResult> {
-	return invoke('plugin:haptics|play', { req });
+	return invalidInput(invoke<PlayResult>('plugin:haptics|play', { req }));
 }
 
 function sendSteps(steps: CompiledStep[]): Promise<PlayResult> {
-	return invoke('plugin:haptics|play_steps', { steps });
+	return invalidInput(invoke<PlayResult>('plugin:haptics|play_steps', { steps }));
 }
 
 /** Plays `{ atMs, request }` steps scheduled natively from one start time. */
@@ -309,7 +322,7 @@ export function playSteps(steps: CompiledStep[]): Promise<PlayResult> {
 
 /** System-style feedback that follows the touch-feedback setting. Not affected by the controls above. */
 export function ui(kind: UiKind): Promise<PlayResult> {
-	return invoke('plugin:haptics|ui', { kind });
+	return invalidInput(invoke<PlayResult>('plugin:haptics|ui', { kind }));
 }
 
 export type { Decision };
