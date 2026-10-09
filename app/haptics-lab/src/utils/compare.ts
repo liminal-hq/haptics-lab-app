@@ -113,8 +113,12 @@ export function thresholdSentence(felt: Record<string, boolean>): string {
 	const marked = RUNGS.filter((r) => felt[String(r)]);
 	if (marked.length === 0) return 'Mark each rung you can feel to find your threshold.';
 	const first = marked[0];
-	if (first === RUNGS[0])
+	if (marked.length === RUNGS.length) {
 		return 'You felt every rung from the lowest. This motor is sensitive at low strengths.';
+	}
+	if (first === RUNGS[0]) {
+		return 'You felt the lowest rung, so this motor is sensitive at low strengths.';
+	}
 	return `You first felt it at ${first.toFixed(1)}. Anything below that is lost, so keep important cues above it.`;
 }
 
@@ -145,8 +149,9 @@ export function simulatePolicy(
 	const outputs: SimOutput[] = [];
 	let busyUntil = 0;
 	let queueEnd = 0;
-	let queued = 0;
+	let waiting: number[] = []; // start times of triggers still waiting in the queue
 	let group: SimOutput | null = null;
+	let groupStart = 0; // when the first trigger of the open group arrived
 	const window = typeof policy === 'object' ? policy.coalesce : 0;
 
 	for (let i = 0; i < count; i++) {
@@ -160,13 +165,13 @@ export function simulatePolicy(
 			}
 			outputs.push({ at: t, dur: est, kind: 'played' });
 		} else if (policy === 'queue') {
-			if (t >= queueEnd) queued = 0;
-			if (t < queueEnd && queued >= MAX_QUEUE) {
+			waiting = waiting.filter((start) => start > t);
+			if (t < queueEnd && waiting.length >= MAX_QUEUE) {
 				outputs.push({ at: t, dur: 0, kind: 'dropped' });
 				continue;
 			}
 			const at = Math.max(t, queueEnd);
-			if (at > t) queued++;
+			if (at > t) waiting.push(at);
 			outputs.push({ at, dur: est, kind: at > t ? 'queued' : 'played' });
 			queueEnd = at + est;
 		} else if (policy === 'drop-if-busy') {
@@ -176,11 +181,13 @@ export function simulatePolicy(
 				outputs.push({ at: t, dur: est, kind: 'played' });
 				busyUntil = t + est;
 			}
-		} else if (group && t - group.at <= window) {
+		} else if (group && t - groupStart <= window) {
 			group.merges = Math.min(MAX_MERGES, (group.merges ?? 0) + 1);
 			outputs.push({ at: t, dur: 0, kind: 'merged' });
 		} else {
-			group = { at: t, dur: est, kind: 'played', merges: 0 };
+			// The runtime holds the first trigger for the window so later ones can merge into it.
+			groupStart = t;
+			group = { at: t + window, dur: est, kind: 'played', merges: 0 };
 			outputs.push(group);
 		}
 	}

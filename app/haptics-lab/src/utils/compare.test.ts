@@ -127,7 +127,11 @@ describe('strength ladder', () => {
 	it('finds the threshold from the marked rungs', () => {
 		expect(thresholdSentence({})).toBe('Mark each rung you can feel to find your threshold.');
 		expect(thresholdSentence({ '0.3': true, '0.4': true })).toContain('first felt it at 0.3');
-		expect(thresholdSentence({ '0.1': true })).toContain('every rung');
+		expect(thresholdSentence({ '0.1': true })).toBe(
+			'You felt the lowest rung, so this motor is sensitive at low strengths.',
+		);
+		const all = Object.fromEntries(RUNGS.map((r) => [String(r), true]));
+		expect(thresholdSentence(all)).toContain('every rung');
 	});
 });
 
@@ -158,6 +162,20 @@ describe('simulatePolicy', () => {
 		expect(s.summary).toContain('5 plays, 4 waited');
 	});
 
+	it('frees a queue slot as each queued play starts', () => {
+		// 60 ms plays, a trigger every 25 ms: the queue never holds more than four at once.
+		const s = sim('queue', 8, 25, 60);
+		expect(s.outputs.filter((o) => o.kind === 'dropped')).toHaveLength(1);
+		expect(s.outputs.map((o) => o.kind).slice(0, 6)).toEqual([
+			'played',
+			'queued',
+			'queued',
+			'queued',
+			'queued',
+			'queued',
+		]);
+	});
+
 	it('drops triggers while the motor is busy', () => {
 		const s = sim('drop-if-busy');
 		expect(s.outputs.map((o) => o.kind)).toEqual([
@@ -181,6 +199,7 @@ describe('simulatePolicy', () => {
 			'merged',
 		]);
 		expect(s.outputs[0].merges).toBe(3);
+		expect(s.outputs[0].at).toBe(100);
 		expect(s.summary).toContain('1 played, 5 merged');
 	});
 

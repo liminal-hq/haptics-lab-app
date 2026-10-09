@@ -99,7 +99,6 @@ function LadderCard() {
 						spacing={1.5}
 						alignItems="center"
 						sx={{
-							opacity: row.reachable ? 1 : 0.55,
 							p: 1,
 							borderRadius: '12px',
 							bgcolor: sweeping === row.tier ? 'container.highest' : 'transparent',
@@ -107,7 +106,10 @@ function LadderCard() {
 					>
 						<TierBadge tier={row.tier} mixed={row.report?.mixed} />
 						<Box sx={{ flex: 1, minWidth: 0 }}>
-							<Typography variant="body2" sx={{ fontWeight: 500 }}>
+							<Typography
+								variant="body2"
+								sx={{ fontWeight: 500, color: row.reachable ? 'text.primary' : 'text.secondary' }}
+							>
 								{tierName(row.tier)}
 								{row.report ? ` · ${row.report.estimatedMs} ms` : ''}
 							</Typography>
@@ -212,7 +214,8 @@ function StrengthCard() {
 }
 
 function PolicyCard() {
-	const { run, caps, masterScale, maxTier } = useLab();
+	const { run, caps, masterScale, maxTier, stopCount, setError } = useLab();
+	const [firing, setFiring] = useState(false);
 	const [bench] = usePersistentState<BenchState>('bench', DEFAULT_BENCH);
 	const [choice, setChoice] = useState<PolicyChoice>(policyChoice(bench.policy));
 	const [count, setCount] = useState(5);
@@ -237,10 +240,19 @@ function PolicyCard() {
 
 	const fire = async () => {
 		const id = `${pattern.id ?? 'bench'}-${choice}`;
-		await haptics.register(id, { ...pattern, id, policy });
-		for (let i = 0; i < count; i++) {
-			void run(`${id} #${i + 1}`, () => haptics.trigger(id));
-			if (i < count - 1) await new Promise((r) => setTimeout(r, gap));
+		const stoppedAt = stopCount();
+		setFiring(true);
+		try {
+			await haptics.register(id, { ...pattern, id, policy });
+			for (let i = 0; i < count; i++) {
+				if (stopCount() !== stoppedAt) break;
+				void run(`${id} #${i + 1}`, () => haptics.trigger(id));
+				if (i < count - 1) await new Promise((r) => setTimeout(r, gap));
+			}
+		} catch (e: unknown) {
+			setError(e instanceof Error ? e.message : String(e));
+		} finally {
+			setFiring(false);
 		}
 	};
 
@@ -326,7 +338,7 @@ function PolicyCard() {
 					</Box>
 				</Box>
 				<Typography variant="body2">{sim.summary}</Typography>
-				<Button variant="contained" onClick={() => void fire()}>
+				<Button variant="contained" disabled={firing} onClick={() => void fire()}>
 					Fire
 				</Button>
 			</Stack>
