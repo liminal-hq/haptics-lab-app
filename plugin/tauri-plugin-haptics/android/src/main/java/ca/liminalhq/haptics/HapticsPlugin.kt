@@ -17,6 +17,7 @@ import app.tauri.plugin.JSArray
 import app.tauri.plugin.JSObject
 import app.tauri.plugin.Plugin
 import org.json.JSONArray
+import org.json.JSONObject
 
 @InvokeArg
 internal class AndroidConfigArgs {
@@ -45,6 +46,10 @@ internal class EffectRequestArgs {
   lateinit var effect: JSObject
 }
 
+private val PRIMITIVE_IDS = listOf("tick", "low_tick", "click", "thud", "spin", "quick_rise", "slow_rise")
+
+private val EFFECT_IDS = listOf("click", "double_click", "tick", "heavy_click")
+
 @TauriPlugin
 class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
 
@@ -61,36 +66,123 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
   @Command
   fun capabilities(invoke: Invoke) {
     val ret = JSObject()
+    val sdk = Build.VERSION.SDK_INT
 
     val hasVibrator = vibrator.hasVibrator()
+    val hasAmplitude = if (hasVibrator) vibrator.hasAmplitudeControl() else false
+    ret.put("platform", "android")
+    ret.put("sdkInt", sdk)
     ret.put("hasVibrator", hasVibrator)
-    ret.put("hasAmplitudeControl", if (hasVibrator) vibrator.hasAmplitudeControl() else false)
+    ret.put("hasAmplitudeControl", hasAmplitude)
 
-    // composition primitives
-    val compositionSupported = if (Build.VERSION.SDK_INT >= 30) vibrator.areAllPrimitivesSupported(
-      VibrationEffect.Composition.PRIMITIVE_CLICK,
-      VibrationEffect.Composition.PRIMITIVE_TICK,
-      VibrationEffect.Composition.PRIMITIVE_THUD,
-      VibrationEffect.Composition.PRIMITIVE_SPIN,
-      VibrationEffect.Composition.PRIMITIVE_QUICK_RISE,
-      VibrationEffect.Composition.PRIMITIVE_SLOW_RISE,
-    ) else false
-    ret.put("compositionSupported", compositionSupported)
+    // Composition primitives, reported one by one: a missing primitive must not hide the rest.
+    val primitives = primitiveSupport(hasVibrator)
+    val prims = JSObject()
+    var anyPrimitive = false
+    for ((id, support) in primitives) {
+      val entry = JSObject()
+      entry.put("supported", support.first)
+      entry.put("durationMs", support.second ?: JSONObject.NULL)
+      prims.put(id, entry)
+      if (support.first) anyPrimitive = true
+    }
+    ret.put("primitives", prims)
+    ret.put("compositionSupported", sdk >= 30 && anyPrimitive)
+
+    ret.put("effects", effectSupport(hasVibrator))
 
     // Envelope effects (API 36+); gated on device support
-    val envelopeSupported = envelopeEffectsSupported()
+    val envelopeSupported = hasVibrator && envelopeEffectsSupported()
     ret.put("envelopeSupported", envelopeSupported)
     if (envelopeSupported) {
       envelopeInfo()?.let { ret.put("envelopeInfo", it) }
     }
 
-    // system setting (optional)
-    val enabled = try {
-      Settings.System.getInt(activity.contentResolver, Settings.System.HAPTIC_FEEDBACK_ENABLED, 1) != 0
-    } catch (_: Throwable) { null }
+    if (hasVibrator && sdk >= 31) {
+      val resonant = runCatching { vibrator.resonantFrequency }.getOrDefault(Float.NaN)
+      if (!resonant.isNaN()) ret.put("resonantHz", resonant.toDouble())
+      val q = runCatching { vibrator.qFactor }.getOrDefault(Float.NaN)
+      if (!q.isNaN()) ret.put("qFactor", q.toDouble())
+    }
+
+    ret.put("topTier", topTier(hasVibrator, envelopeSupported, anyPrimitive, hasAmplitude))
+
+    // The touch-feedback setting; `hapticFeedbackEnabled` is the deprecated name for one release.
+    val enabled = touchFeedbackEnabled()
+    ret.put("touchFeedbackEnabled", enabled ?: JSONObject.NULL)
     if (enabled != null) ret.put("hapticFeedbackEnabled", enabled)
 
+    val limits = JSObject()
+    limits.put("maxDurationMs", (cfg.maxDurationMs ?: 10_000).coerceAtLeast(1))
+    limits.put("maxAmplitude", (cfg.maxAmplitude ?: 255).coerceIn(1, 255))
+    limits.put("allowRepeatingWaveforms", cfg.allowRepeatingWaveforms ?: false)
+    ret.put("limits", limits)
+
+    val device = JSObject()
+    device.put("manufacturer", Build.MANUFACTURER)
+    device.put("model", Build.MODEL)
+    device.put("release", Build.VERSION.RELEASE)
+    ret.put("device", device)
+
     invoke.resolve(ret)
+  }
+
+  private fun touchFeedbackEnabled(): Boolean? = try {
+    Settings.System.getInt(activity.contentResolver, Settings.System.HAPTIC_FEEDBACK_ENABLED, 1) != 0
+  } catch (_: Throwable) { null }
+
+  private fun topTier(
+    hasVibrator: Boolean,
+    envelope: Boolean,
+    anyPrimitive: Boolean,
+    amplitude: Boolean,
+  ): Int = when {
+    !hasVibrator -> 0
+    envelope -> 4
+    anyPrimitive -> 3
+    amplitude -> 2
+    else -> 1
+  }
+
+  /** Per primitive id: (supported, measured duration in ms or null). */
+  private fun primitiveSupport(hasVibrator: Boolean): Map<String, Pair<Boolean, Int?>> {
+    val ids = PRIMITIVE_IDS
+    if (!hasVibrator || Build.VERSION.SDK_INT < 30) {
+      return ids.associateWith { Pair(false, null) }
+    }
+    val constants = ids.map { primitiveConstant(it) }
+    val supported = runCatching { vibrator.arePrimitivesSupported(*constants.toIntArray()) }
+      .getOrDefault(BooleanArray(ids.size))
+    val durations = if (Build.VERSION.SDK_INT >= 31) {
+      runCatching { vibrator.getPrimitiveDurations(*constants.toIntArray()) }.getOrNull()
+    } else null
+
+    return ids.indices.associate { i ->
+      val ok = supported.getOrElse(i) { false }
+      val ms = durations?.getOrNull(i)?.takeIf { ok && it > 0 }
+      ids[i] to Pair(ok, ms)
+    }
+  }
+
+  /** `yes`, `no` or `unknown` per predefined effect (API 30+; unknown below). */
+  private fun effectSupport(hasVibrator: Boolean): JSObject {
+    val out = JSObject()
+    val ids = EFFECT_IDS
+    val results = if (hasVibrator && Build.VERSION.SDK_INT >= 30) {
+      runCatching {
+        vibrator.areEffectsSupported(*ids.map { predefinedConstant(it) }.toIntArray())
+      }.getOrNull()
+    } else null
+
+    for ((i, id) in ids.withIndex()) {
+      val label = when (results?.getOrNull(i)) {
+        Vibrator.VIBRATION_EFFECT_SUPPORT_YES -> "yes"
+        Vibrator.VIBRATION_EFFECT_SUPPORT_NO -> "no"
+        else -> if (hasVibrator) "unknown" else "no"
+      }
+      out.put(id, label)
+    }
+    return out
   }
 
   @Command
@@ -467,6 +559,7 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
   private fun mapPrimitive(id: String): Int {
     return when (id.lowercase()) {
       "tick" -> VibrationEffect.Composition.PRIMITIVE_TICK
+      "low_tick" -> VibrationEffect.Composition.PRIMITIVE_LOW_TICK
       "click" -> VibrationEffect.Composition.PRIMITIVE_CLICK
       "thud" -> VibrationEffect.Composition.PRIMITIVE_THUD
       "spin" -> VibrationEffect.Composition.PRIMITIVE_SPIN
@@ -475,6 +568,10 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
       else -> VibrationEffect.Composition.PRIMITIVE_CLICK
     }
   }
+
+  private fun primitiveConstant(id: String): Int = mapPrimitive(id)
+
+  private fun predefinedConstant(id: String): Int = mapPredefinedEffect(id)
 
   private fun getVibrator(ctx: Context): Vibrator {
     return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {

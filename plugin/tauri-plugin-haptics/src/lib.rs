@@ -106,11 +106,11 @@ pub fn init<R: Runtime>() -> TauriPlugin<R, Option<config::Config>> {
 
             app.manage(HapticsState {
                 app: app.clone(),
-                config,
+                config: config.clone(),
                 #[cfg(any(target_os = "android", target_os = "ios"))]
                 mobile: mobile::Haptics(handle),
                 #[cfg(not(any(target_os = "android", target_os = "ios")))]
-                desktop: desktop::Haptics,
+                desktop: desktop::Haptics::new(config),
             });
 
             Ok(())

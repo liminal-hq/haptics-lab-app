@@ -8,10 +8,26 @@ import type { Capabilities } from '@liminal-hq/plugin-haptics';
 import { SPLASH_LOOP_MS, splashEffect, splashEnvelope, splashWaveform } from './splashHaptics';
 
 const baseCaps: Capabilities = {
+	platform: 'android',
+	sdkInt: 37,
 	hasVibrator: true,
 	hasAmplitudeControl: true,
+	topTier: 3,
 	compositionSupported: true,
+	primitives: {
+		tick: { supported: true, durationMs: 10 },
+		low_tick: { supported: true, durationMs: 12 },
+		click: { supported: true, durationMs: 15 },
+		thud: { supported: true, durationMs: 30 },
+		spin: { supported: true, durationMs: 90 },
+		quick_rise: { supported: true, durationMs: 60 },
+		slow_rise: { supported: true, durationMs: 150 },
+	},
+	effects: { click: 'yes', double_click: 'yes', tick: 'yes', heavy_click: 'yes' },
 	envelopeSupported: false,
+	touchFeedbackEnabled: true,
+	limits: { maxDurationMs: 10000, maxAmplitude: 255, allowRepeatingWaveforms: false },
+	device: { manufacturer: 'Google', model: 'Pixel 8 Pro', release: '17' },
 };
 
 const envelopeInfo = {

@@ -62,17 +62,32 @@ export type Waveform = {
 };
 
 export type Capabilities = {
+	platform: 'android' | 'ios' | 'desktop' | 'web';
+	sdkInt?: number; // Android only
 	hasVibrator: boolean;
 	hasAmplitudeControl: boolean;
-	compositionSupported: boolean;
+	topTier: 0 | 1 | 2 | 3 | 4; // 4 envelope, 3 primitives, 2 amplitude, 1 on/off, 0 none
+
+	compositionSupported: boolean; // API 30+ and at least one primitive
+	primitives: Record<PrimitiveId, { supported: boolean; durationMs: number | null }>;
+	effects: Record<'click' | 'double_click' | 'tick' | 'heavy_click', 'yes' | 'no' | 'unknown'>;
+
 	envelopeSupported: boolean;
-	// ... other details
+	envelopeInfo?: EnvelopeInfo; // present when envelopeSupported
+	resonantHz?: number; // API 31
+	qFactor?: number; // API 31
+
+	touchFeedbackEnabled: boolean | null; // null when unreadable
+	hapticFeedbackEnabled?: boolean; // deprecated alias, kept for one release
+
+	limits: { maxDurationMs: number; maxAmplitude: number; allowRepeatingWaveforms: boolean };
+	device: { manufacturer: string; model: string; release: string };
 };
 ```
 
 ### Methods
 
-- `capabilities(): Promise<Capabilities>`
+- `capabilities(): Promise<Capabilities>` — reports each primitive and predefined effect separately, with measured primitive durations where Android provides them. `topTier` is 0 with no vibrator, 4 with envelope support, 3 with any supported primitive, 2 with amplitude control and 1 otherwise. Desktop reports `platform: 'desktop'`, tier 0 and every primitive and effect as unsupported.
 - `play(req: EffectRequest): Promise<PlayResult>`
 - `stop(): Promise<void>`
 
