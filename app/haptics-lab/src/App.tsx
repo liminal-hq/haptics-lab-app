@@ -11,6 +11,7 @@ import TopBar from './components/TopBar';
 import TransportBar from './components/TransportBar';
 import { LabProvider, useLab } from './context/LabContext';
 import { usePersistentState } from './hooks/usePersistentState';
+import BenchScreen from './screens/BenchScreen';
 import DeviceScreen from './screens/DeviceScreen';
 import RawScreen from './screens/RawScreen';
 
@@ -37,9 +38,7 @@ function Shell() {
 				</Alert>
 			) : null}
 			<Box component="main" sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-				{tab === 'bench' ? (
-					<ComingSoon title="Bench">Author a pattern and see what it compiles to.</ComingSoon>
-				) : null}
+				{tab === 'bench' ? <BenchScreen /> : null}
 				{tab === 'cues' ? (
 					<ComingSoon title="Cues">Load a game's cue table and play every cue.</ComingSoon>
 				) : null}
