@@ -3,7 +3,15 @@
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, {
+	createContext,
+	useCallback,
+	useContext,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from 'react';
 import * as haptics from '@liminal-hq/plugin-haptics';
 import type { Capabilities, CompiledSegment, PlayResult, Tier } from '@liminal-hq/plugin-haptics';
 import { usePersistentState } from '../hooks/usePersistentState';
@@ -39,6 +47,11 @@ type Lab = {
 	stopAll: () => Promise<void>;
 	/** Called by stop so sweeps and timers owned by screens can end too. */
 	onStop: (fn: () => void) => () => void;
+	/**
+	 * A number that moves on with every Stop. A long run captures it when it starts and ends when it
+	 * changes, which works even after the screen that started the run has unmounted.
+	 */
+	stopCount: () => number;
 	error: string | null;
 	setError: (message: string | null) => void;
 };
@@ -55,6 +68,8 @@ export function LabProvider({ children }: { children: React.ReactNode }) {
 	const [log, setLog] = useState<LogEntry[]>([]);
 	const [error, setError] = useState<string | null>(null);
 	const [stopListeners] = useState(() => new Set<() => void>());
+	const stops = useRef(0);
+	const stopCount = useCallback(() => stops.current, []);
 
 	const refreshCaps = useCallback(async () => {
 		try {
@@ -100,6 +115,7 @@ export function LabProvider({ children }: { children: React.ReactNode }) {
 	);
 
 	const stopAll = useCallback(async () => {
+		stops.current++;
 		stopListeners.forEach((fn) => fn());
 		try {
 			await haptics.stop();
@@ -134,6 +150,7 @@ export function LabProvider({ children }: { children: React.ReactNode }) {
 			run,
 			stopAll,
 			onStop,
+			stopCount,
 			error,
 			setError,
 		};
@@ -149,6 +166,7 @@ export function LabProvider({ children }: { children: React.ReactNode }) {
 		run,
 		stopAll,
 		onStop,
+		stopCount,
 		error,
 	]);
 

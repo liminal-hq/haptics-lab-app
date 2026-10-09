@@ -20,6 +20,7 @@ export default function TierBadge({ tier, mixed = false }: { tier: Tier; mixed?:
 	return (
 		<Box
 			component="span"
+			role="img"
 			aria-label={`Tier ${tier}${mixed ? ' mixed with tier 2' : ''}`}
 			sx={{
 				display: 'inline-flex',

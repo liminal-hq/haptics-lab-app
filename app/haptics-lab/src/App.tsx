@@ -60,6 +60,8 @@ function Shell() {
 					height: 'calc(72px + env(safe-area-inset-bottom, 0px))',
 					pb: 'env(safe-area-inset-bottom, 0px)',
 					bgcolor: 'container.high',
+					// Five tabs must fit a 360 dp phone; MUI's default minimum would not.
+					'& .MuiBottomNavigationAction-root': { minWidth: 0, px: 0.5 },
 				}}
 			>
 				<BottomNavigationAction value="bench" label="Bench" icon={<TuneRounded />} />
