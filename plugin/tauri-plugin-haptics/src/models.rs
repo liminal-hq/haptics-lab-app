@@ -206,7 +206,7 @@ pub const PRIMITIVE_IDS: [&str; 7] = [
 
 pub const EFFECT_IDS: [&str; 4] = ["click", "double_click", "tick", "heavy_click"];
 
-/// One request in a compiled pattern, started `at_ms` after the first step.
+/// One request in a compiled pattern, started `at_ms` after `play_steps` is called.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CompiledStep {
