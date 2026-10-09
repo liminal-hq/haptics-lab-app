@@ -79,6 +79,15 @@ export function LabProvider({ children }: { children: React.ReactNode }) {
 		}
 	}, []);
 
+	// The touch-feedback setting can change while the app is away, so read the device again on return.
+	useEffect(() => {
+		const onVisible = () => {
+			if (document.visibilityState === 'visible') void refreshCaps();
+		};
+		document.addEventListener('visibilitychange', onVisible);
+		return () => document.removeEventListener('visibilitychange', onVisible);
+	}, [refreshCaps]);
+
 	useEffect(() => {
 		haptics
 			.capabilities()
