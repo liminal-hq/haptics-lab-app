@@ -88,7 +88,7 @@ export type Capabilities = {
 ### Methods
 
 - `capabilities(): Promise<Capabilities>` — reports each primitive and predefined effect separately, with measured primitive durations where Android provides them. `topTier` is 0 with no vibrator, 4 with envelope support, 3 with any supported primitive, 2 with amplitude control and 1 otherwise. Desktop reports `platform: 'desktop'`, tier 0 and every primitive and effect as unsupported.
-- `play(req: EffectRequest): Promise<PlayResult>`
+- `play(req: EffectRequest): Promise<PlayResult>` — resolves with the `tier` that played (4 envelope, 3 composition, 2 amplitude, 1 on/off, 0 nothing), `target: 'phone'`, `estimatedMs`, `downgraded` and a one-sentence `reason` (several are joined with `·`); `downgradeReason` is a deprecated alias. Invalid input rejects with `INVALID_EFFECT`; hardware limits never reject, and a device with no vibrator resolves at tier 0. Unknown predefined ids are rejected (`thud` and `pop` are not predefined effects; use the `thud` primitive). Compositions are primitives only: a primitive the motor lacks is swapped for its nearest neighbour (`low_tick → tick → click`, `tick → click`, `thud → click`, `spin → quick_rise`, `slow_rise → quick_rise`), dropped when it has none, and each change is reported in `reason`.
 - `stop(): Promise<void>`
 
 ## Material You Theming Approach

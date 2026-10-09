@@ -29,10 +29,7 @@ export type Waveform = {
 
 export type Composition = {
 	type: 'composition';
-	steps: Array<
-		| { kind: 'primitive'; primitive: PrimitiveId; scale?: number; delayMs?: number }
-		| { kind: 'effect'; effect: PredefinedEffectId; delayMs?: number }
-	>;
+	steps: Array<{ kind: 'primitive'; primitive: PrimitiveId; scale?: number; delayMs?: number }>;
 };
 
 export type Predefined = {
@@ -82,7 +79,7 @@ export type Capabilities = {
 	primitives: Record<PrimitiveId, PrimitiveSupport>;
 
 	// Predefined effects (API 30+; 'unknown' below)
-	effects: Record<PredefinedEffectSupportId, Support>;
+	effects: Record<PredefinedEffectId, Support>;
 
 	// Envelope effects (API 36)
 	envelopeSupported: boolean;
@@ -111,8 +108,14 @@ export type Capabilities = {
 };
 
 export type PlayResult = {
-	ok: boolean;
-	downgraded?: boolean;
+	ok: true; // invalid input rejects; hardware limits never make this false
+	tier: Tier; // the tier that played
+	target: 'phone';
+	estimatedMs: number;
+	downgraded: boolean;
+	reason?: string; // why, in one sentence; several reasons are joined with ' · '
+	policy?: 'played' | 'queued' | 'dropped' | 'coalesced';
+	/** @deprecated Use `reason`. Kept for one release. */
 	downgradeReason?: string;
 };
 
@@ -125,7 +128,5 @@ export type PrimitiveId =
 	| 'quick_rise'
 	| 'slow_rise';
 
-export type PredefinedEffectId = 'click' | 'double_click' | 'tick' | 'thud' | 'pop' | 'heavy_click';
-
-// The predefined effects the device is asked about (`effects` in `Capabilities`).
-export type PredefinedEffectSupportId = 'click' | 'double_click' | 'tick' | 'heavy_click';
+// `thud` and `pop` are not predefined effects; use the `thud` composition primitive.
+export type PredefinedEffectId = 'click' | 'double_click' | 'tick' | 'heavy_click';

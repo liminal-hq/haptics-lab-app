@@ -32,7 +32,7 @@ Bun workspace plus Cargo workspace; `AGENTS.md`'s [Repository Layout](AGENTS.md#
 ## Architecture — the key things to understand
 
 - **One contract, three languages.** A request shape lives in `guest-js/src/types.ts`, `src/models.rs` and the Kotlin parser in `HapticsPlugin.kt`. Change all three together, plus `SPEC.md` and tests.
-- **Capability-gated, never silent.** Unsupported features return `downgraded` and `downgradeReason`; `capabilities()` exposes limits (including `envelopeInfo`) so the UI validates before playing. See `AGENTS.md` → Haptics Plugin Rules.
+- **Capability-gated, never silent.** Unsupported features return `downgraded` and a `reason` (plus the deprecated `downgradeReason` alias for one release); `capabilities()` exposes limits (including `envelopeInfo`) so the UI validates before playing. See `AGENTS.md` → Haptics Plugin Rules.
 - **Safety defaults.** Repeating waveforms are opt-in via config, duration and amplitude are capped, and Stop is always wired.
 - **Envelope amplitude is 0–1** (unlike waveform amplitude, 0–255), with frequencies bounded by the device frequency profile.
 - **Pure logic out of components.** Validation and payload building live in `src/utils/` with unit tests.

@@ -51,7 +51,7 @@ export default function EnvelopeEditor({ caps, onError }: Props) {
 		if (!result.ok) return;
 		try {
 			const res = await haptics.play({ usage: 'touch', effect: result.effect });
-			if (res.downgraded) onError(`Downgraded: ${res.downgradeReason ?? 'unknown reason'}`);
+			if (res.downgraded) onError(`Downgraded: ${res.reason ?? 'unknown reason'}`);
 		} catch (e: unknown) {
 			onError(String(e));
 		}

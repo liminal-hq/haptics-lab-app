@@ -24,7 +24,7 @@ impl Haptics {
     }
 
     pub fn play(&self, _req: EffectRequest) -> Result<PlayResult> {
-        Err(crate::Error::Unsupported)
+        Ok(PlayResult::silent("No vibrator on this platform"))
     }
 
     pub fn stop(&self) -> Result<()> {

@@ -59,10 +59,6 @@ pub enum CompositionStep {
         scale: Option<f32>,
         delay_ms: Option<u64>,
     },
-    Effect {
-        effect: String,
-        delay_ms: Option<u64>,
-    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -203,9 +199,40 @@ pub const EFFECT_IDS: [&str; 4] = ["click", "double_click", "tick", "heavy_click
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlayResult {
+    /// Always true: invalid input rejects and hardware limits never make this false.
     pub ok: bool,
-    pub downgraded: Option<bool>,
+    /// The tier that played: 4 envelope, 3 primitives, 2 amplitude, 1 on/off, 0 nothing.
+    pub tier: u8,
+    /// Kept as a field so a router can add other targets later.
+    pub target: String,
+    pub estimated_ms: u64,
+    #[serde(default)]
+    pub downgraded: bool,
+    /// Why, in one sentence; several reasons are joined with ` · `.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+    /// `played`, `queued`, `dropped` or `coalesced`; set by the pattern scheduler.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub policy: Option<String>,
+    /// Deprecated alias of `reason`, kept for one release.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub downgrade_reason: Option<String>,
+}
+
+impl PlayResult {
+    /// A request that resolved without playing anything, with the reason.
+    pub fn silent(reason: &str) -> Self {
+        Self {
+            ok: true,
+            tier: 0,
+            target: "phone".to_string(),
+            estimated_ms: 0,
+            downgraded: true,
+            reason: Some(reason.to_string()),
+            policy: None,
+            downgrade_reason: Some(reason.to_string()),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -359,5 +386,49 @@ mod tests {
             model: "Desktop".to_string(),
             release: "1".to_string(),
         }
+    }
+
+    #[test]
+    fn deserializes_play_result_with_tier_reason_and_alias() {
+        let raw = serde_json::json!({
+            "ok": true,
+            "tier": 2,
+            "target": "phone",
+            "estimatedMs": 480,
+            "downgraded": true,
+            "reason": "Repeat ignored: allowRepeatingWaveforms is false",
+            "downgradeReason": "Repeat ignored: allowRepeatingWaveforms is false"
+        });
+
+        let res: PlayResult = serde_json::from_value(raw).expect("deserialize play result");
+        assert_eq!(res.tier, 2);
+        assert_eq!(res.estimated_ms, 480);
+        assert!(res.downgraded);
+        assert_eq!(res.reason, res.downgrade_reason);
+        assert_eq!(res.policy, None);
+    }
+
+    #[test]
+    fn silent_result_resolves_at_tier_zero_with_a_reason() {
+        let value = serde_json::to_value(PlayResult::silent("No vibrator on this platform"))
+            .expect("serialize play result");
+        assert_eq!(value["ok"], true);
+        assert_eq!(value["tier"], 0);
+        assert_eq!(value["target"], "phone");
+        assert_eq!(value["downgraded"], true);
+        assert_eq!(value["reason"], "No vibrator on this platform");
+        assert_eq!(value["downgradeReason"], "No vibrator on this platform");
+        assert!(value.get("policy").is_none());
+    }
+
+    #[test]
+    fn rejects_the_removed_effect_composition_step() {
+        let raw = serde_json::json!({
+            "effect": {
+                "type": "composition",
+                "steps": [{ "kind": "effect", "effect": "thud" }]
+            }
+        });
+        assert!(serde_json::from_value::<EffectRequest>(raw).is_err());
     }
 }
