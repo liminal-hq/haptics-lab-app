@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { createTheme, ThemeProvider, CssBaseline } from '@mui/material';
+import { createTheme, ThemeProvider, CssBaseline, GlobalStyles } from '@mui/material';
 import { getMaterialYouColours } from '@liminal-hq/plugin-material-you';
+
+// Pages and code blocks still scroll, but no scrollbar is drawn. `scrollbar-width` covers
+// Firefox and current Chromium; the `::-webkit-scrollbar` rule covers WebKitGTK and older WebViews.
+const hiddenScrollbars = {
+	'*': { scrollbarWidth: 'none' },
+	'*::-webkit-scrollbar': { display: 'none' },
+};
 
 // Fallback theme for desktop or when Material You is unavailable
 const fallbackTheme = createTheme({
@@ -78,6 +85,7 @@ export const MaterialYouThemeProvider: React.FC<{ children: React.ReactNode }> =
 	return (
 		<ThemeProvider theme={theme}>
 			<CssBaseline />
+			<GlobalStyles styles={hiddenScrollbars} />
 			{children}
 		</ThemeProvider>
 	);
