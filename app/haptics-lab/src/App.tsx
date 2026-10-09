@@ -12,6 +12,7 @@ import TransportBar from './components/TransportBar';
 import { LabProvider, useLab } from './context/LabContext';
 import { usePersistentState } from './hooks/usePersistentState';
 import BenchScreen from './screens/BenchScreen';
+import CompareScreen from './screens/CompareScreen';
 import DeviceScreen from './screens/DeviceScreen';
 import RawScreen from './screens/RawScreen';
 
@@ -42,11 +43,7 @@ function Shell() {
 				{tab === 'cues' ? (
 					<ComingSoon title="Cues">Load a game's cue table and play every cue.</ComingSoon>
 				) : null}
-				{tab === 'compare' ? (
-					<ComingSoon title="Compare">
-						Run a pattern across tiers, strengths and policies.
-					</ComingSoon>
-				) : null}
+				{tab === 'compare' ? <CompareScreen /> : null}
 				{tab === 'raw' ? <RawScreen /> : null}
 				{tab === 'device' ? <DeviceScreen /> : null}
 			</Box>
