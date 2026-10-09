@@ -21,6 +21,10 @@ pub fn run() {
         .plugin(
             tauri_plugin_log::Builder::default()
                 .level(log_level())
+                // The JNI bridge traces every string conversion and exception check on
+                // Android, which buries the app's own lines at `Trace` in a debug build
+                // (thousands of lines for one launch).
+                .level_for("jni", log::LevelFilter::Warn)
                 .format(|out, message, record| {
                     out.finish(format_args!(
                         "[{}][{}][{}] {}",
