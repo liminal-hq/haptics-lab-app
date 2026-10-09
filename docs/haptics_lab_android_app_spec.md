@@ -1,3 +1,5 @@
+> **Superseded.** This is the original plan and is kept for context. The current contract is in `SPEC.md`, and the v2 tier ladder, pattern API and lab are described there and in the root `README.md`. Where this document disagrees (for example `thud` and `pop` as predefined effects, `downgradeReason`, or composition `effect` steps), `SPEC.md` wins.
+
 # Haptics Lab (Android)
 
 A small, focused Android app for exploring, authoring, and replaying haptic “patterns” on a modern phone. It’s a playground that lets you prototype sensations (clicks, thuds, ramps, textures) using Android’s haptics APIs and compare how they feel across devices.

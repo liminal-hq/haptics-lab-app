@@ -26,7 +26,7 @@ This repository is built largely by autonomous coding agents. The rules below ar
 
 ## Project Status
 
-Haptics Lab is an early-stage Tauri v2 app for exploring, authoring and replaying haptic patterns on Android, built on a purpose-written `tauri-plugin-haptics`. The plugin plays one-shot, waveform, predefined, composition and (Android 16 / API 36+) envelope effects, and reports device capabilities. The app opens on a short splash (the animated app icon with a matching vibration) and then shows a small UI: capabilities readout, one-shot and click buttons, a waveform editor and an envelope editor. Composition editing, a pattern library and import/export are still to come. See `SPEC.md` and `docs/` for the plan.
+Haptics Lab is an early-stage Tauri v2 app for exploring, authoring and replaying haptic patterns on Android, built on a purpose-written `tauri-plugin-haptics`. The plugin plays one-shot, waveform, predefined, composition and (Android 16 / API 36+) envelope effects, and reports device capabilities. The app opens on a short splash (the animated app icon with a matching vibration) and then shows a five-tab lab: Bench (author a portable pattern and see what it compiles to), Cues (a game's cue table), Compare (tiers, strengths and policies), Raw (one editor per effect type and the UI lane) and Device (the capability readout and tier ladder). Patterns compile down a five-tier ladder (envelope, primitives, amplitude, on/off, off) in pure TypeScript under `plugin/tauri-plugin-haptics/guest-js/src/pattern/`. See `SPEC.md` and `docs/` for the plan.
 
 ## Localization and Spelling
 
