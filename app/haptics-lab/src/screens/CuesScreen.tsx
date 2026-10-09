@@ -32,35 +32,33 @@ type Props = {
 };
 
 export default function CuesScreen({ onOpenBench, onOpenUiLane }: Props) {
-	const { caps, maxTier, masterScale, run, onStop, setError } = useLab();
+	const { caps, maxTier, masterScale, run, onStop, stopCount, setError } = useLab();
 	const [cues, setCues] = usePersistentState<Cue[]>('cues', SEED_CUES);
 	const [importing, setImporting] = useState(false);
 	const [text, setText] = useState('');
 	const [importErrors, setImportErrors] = useState<string[]>([]);
 	const [running, setRunning] = useState<string | null>(null);
-	const cancelled = useRef(false);
+	const runId = useRef(0); // each run takes the next id, so an older run ends when a newer one starts
 
-	useEffect(
-		() =>
-			onStop(() => {
-				cancelled.current = true;
-				setRunning(null);
-			}),
-		[onStop],
-	);
+	useEffect(() => onStop(() => setRunning(null)), [onStop]);
 
 	const rows = useMemo(
 		() => (caps ? cueRows(cues, caps, { maxTier, scale: masterScale }) : []),
 		[cues, caps, maxTier, masterScale],
 	);
 
-	// Register every pattern once the device is known so a play is a single trigger.
+	// Register every pattern once the device is known so a play is a single trigger. Each cue is
+	// registered on its own, so one bad cue can't stop the rest from registering.
 	useEffect(() => {
 		if (!caps) return;
-		const table = Object.fromEntries(cues.filter((c) => c.pattern).map((c) => [c.id, c.pattern!]));
-		haptics
-			.registerAll(table)
-			.catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
+		for (const cue of cues) {
+			if (!cue.pattern) continue;
+			haptics
+				.register(cue.id, cue.pattern)
+				.catch((e: unknown) =>
+					setError(`${cue.name}: ${e instanceof Error ? e.message : String(e)}`),
+				);
+		}
 	}, [caps, cues, setError]);
 
 	const play = (row: CueRow, tier?: Tier) => {
@@ -74,14 +72,17 @@ export default function CuesScreen({ onOpenBench, onOpenUiLane }: Props) {
 	};
 
 	const playSequence = async (label: string, steps: { row: CueRow; tier?: Tier }[]) => {
-		cancelled.current = false;
+		const mine = ++runId.current;
+		const stoppedAt = stopCount();
+		// Ends on Stop (even after leaving this tab) or when a newer run has started.
+		const live = () => runId.current === mine && stopCount() === stoppedAt;
 		setRunning(label);
 		for (const { row, tier } of steps) {
-			if (cancelled.current) break;
+			if (!live()) break;
 			await play(row, tier);
 			await wait(Math.max(row.estimatedMs, 40) + GAP_MS);
 		}
-		setRunning(null);
+		if (runId.current === mine) setRunning(null);
 	};
 
 	const playAll = () =>
