@@ -18,8 +18,8 @@ type Props = {
 	events: PatternEvent[];
 	selected: number;
 	onSelect: (index: number) => void;
-	/** 0..1 across the pattern while it plays. */
-	playhead: number | null;
+	/** Where the playhead is, in ms from the start, while the pattern plays. */
+	playheadMs: number | null;
 };
 
 function levelAt(ev: Extract<PatternEvent, { type: 'continuous' }>, x: number): number {
@@ -35,7 +35,7 @@ function levelAt(ev: Extract<PatternEvent, { type: 'continuous' }>, x: number): 
 	return pts[pts.length - 1].v;
 }
 
-export default function Timeline({ events, selected, onSelect, playhead }: Props) {
+export default function Timeline({ events, selected, onSelect, playheadMs }: Props) {
 	const theme = useTheme();
 	const span = Math.max(100, patternLength(events)) * 1.06;
 	const x = (ms: number) => PAD + (ms / span) * (W - PAD * 2);
@@ -144,10 +144,10 @@ export default function Timeline({ events, selected, onSelect, playhead }: Props
 						</g>
 					);
 				})}
-				{playhead !== null ? (
+				{playheadMs !== null ? (
 					<line
-						x1={x(playhead * span)}
-						x2={x(playhead * span)}
+						x1={x(Math.min(playheadMs, span))}
+						x2={x(Math.min(playheadMs, span))}
 						y1={TOP - 6}
 						y2={BASE + 4}
 						stroke={theme.palette.error.main}

@@ -33,7 +33,7 @@ import TriggerCard from './bench/TriggerCard';
 const PREVIEW_GAP_MS = 80;
 
 export default function BenchScreen() {
-	const { caps, maxTier, masterScale, run, onStop } = useLab();
+	const { caps, maxTier, masterScale, run, onStop, stopCount } = useLab();
 	const [state, setState] = usePersistentState<BenchState>('bench', DEFAULT_BENCH);
 	const [triggerScale, setTriggerScale] = usePersistentState('bench-trigger-scale', 1);
 	const [respect, setRespect] = usePersistentState('bench-respect', false);
@@ -41,6 +41,7 @@ export default function BenchScreen() {
 	const [selected, setSelected] = useState(0);
 	const playhead = usePlayhead();
 	const lastTick = useRef(0);
+	const [playheadSpan, setPlayheadSpan] = useState(60);
 
 	useEffect(() => onStop(playhead.cancel), [onStop, playhead.cancel]);
 
@@ -85,9 +86,11 @@ export default function BenchScreen() {
 
 	const trigger = async () => {
 		if (issues.length) return;
-		const id = pattern.id ?? 'bench';
+		// Registered under its own prefix so a cue with the same id keeps its registration.
+		const id = `bench:${pattern.id ?? 'bench'}`;
+		const stoppedAt = stopCount();
 		const played = await run(
-			id,
+			pattern.id ?? 'bench',
 			async () => {
 				await haptics.register(id, pattern);
 				return haptics.trigger(id, {
@@ -98,7 +101,14 @@ export default function BenchScreen() {
 			},
 			report?.segments,
 		);
-		if (played && report && played.tier > 0) playhead.start(Math.max(report.estimatedMs, 60));
+		// Only run the playhead for a play that happened and wasn't stopped in the meantime.
+		const happened =
+			played && played.tier > 0 && played.policy !== 'dropped' && played.policy !== 'coalesced';
+		if (happened && report && stopCount() === stoppedAt) {
+			const span = Math.max(report.estimatedMs, 60);
+			setPlayheadSpan(span);
+			playhead.start(span);
+		}
 	};
 
 	return (
@@ -122,7 +132,7 @@ export default function BenchScreen() {
 						events={state.events}
 						selected={index}
 						onSelect={setSelected}
-						playhead={playhead.position}
+						playheadMs={playhead.position === null ? null : playhead.position * playheadSpan}
 					/>
 					<Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap' }}>
 						{state.events.map((ev, i) => (
