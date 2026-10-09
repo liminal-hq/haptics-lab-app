@@ -328,6 +328,7 @@ function sendSteps(steps: CompiledStep[]): Promise<PlayResult> {
 
 /** Plays `{ atMs, request }` steps scheduled natively from one start time. */
 export function playSteps(steps: CompiledStep[]): Promise<PlayResult> {
+	if (masterScale === 0) return Promise.resolve(silent('Master scale is 0, so nothing plays'));
 	return sendSteps(steps.map((s) => ({ ...s, request: scaled(s.request) })));
 }
 

@@ -208,6 +208,15 @@ describe('review fixes', () => {
 		expect(commands().filter((c) => c.endsWith('|play'))).toHaveLength(0);
 	});
 
+	it('plays no steps at a master scale of 0', async () => {
+		api.setMasterScale(0);
+		const res = await api.playSteps([
+			{ atMs: 0, request: { effect: { type: 'oneshot', durationMs: 20, amplitude: 200 } } },
+		]);
+		expect(res.tier).toBe(0);
+		expect(commands().filter((c) => c.endsWith('|play_steps'))).toHaveLength(0);
+	});
+
 	it('treats a non-finite trigger scale as full strength', async () => {
 		await api.register('nan', { ...click });
 		await api.trigger('nan', { scale: Number.NaN });
