@@ -170,6 +170,52 @@ describe('trigger', () => {
 	});
 });
 
+describe('review fixes', () => {
+	it('registers a copy, so editing the original does not change the pattern', async () => {
+		const original = JSON.parse(JSON.stringify(click));
+		await api.register('copy', original);
+		original.events[0].intensity = 0.1;
+		await api.trigger('copy');
+		const call = invoke.mock.calls.find((c) => c[0] === 'plugin:haptics|play');
+		expect(call?.[1].req.effect.steps[0].scale).toBeCloseTo(0.8);
+	});
+
+	it('unregister cancels what that pattern still had queued', async () => {
+		await api.register('q', { ...click, policy: 'queue' });
+		await api.trigger('q');
+		const waiting = api.trigger('q');
+		await vi.advanceTimersByTimeAsync(0);
+		api.unregister('q');
+		expect((await waiting).policy).toBe('dropped');
+	});
+
+	it('does not play a trigger that was waiting on capabilities when stop() ran', async () => {
+		await api.register('late', { ...click });
+		const pending = api.trigger('late');
+		await api.stop();
+		const res = await pending;
+		expect(res.policy).toBe('dropped');
+		expect(commands().filter((c) => c.endsWith('|play'))).toHaveLength(0);
+	});
+
+	it('plays nothing at a master scale of 0, for raw plays and patterns alike', async () => {
+		api.setMasterScale(0);
+		await api.register('zero', { ...click });
+		const pattern = await api.trigger('zero');
+		const raw = await api.play({ effect: { type: 'oneshot', durationMs: 50, amplitude: 200 } });
+		expect(pattern.tier).toBe(0);
+		expect(raw.tier).toBe(0);
+		expect(commands().filter((c) => c.endsWith('|play'))).toHaveLength(0);
+	});
+
+	it('treats a non-finite trigger scale as full strength', async () => {
+		await api.register('nan', { ...click });
+		await api.trigger('nan', { scale: Number.NaN });
+		const call = invoke.mock.calls.find((c) => c[0] === 'plugin:haptics|play');
+		expect(call?.[1].req.effect.steps[0].scale).toBeCloseTo(0.8);
+	});
+});
+
 describe('raw play', () => {
 	const oneShot = { effect: { type: 'oneshot', durationMs: 50, amplitude: 200 } } as const;
 

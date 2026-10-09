@@ -43,10 +43,14 @@ let cached: Promise<Capabilities> | null = null;
 let loaded: Capabilities | null = null;
 let masterScale = 1;
 let maxTier: Tier | null = null;
+let stopCount = 0; // moves on with every stop(), so a trigger waiting on capabilities can tell
 const patterns = new Map<string, PatternEntry>();
 const scheduler = new PatternScheduler();
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+
+/** A 0..1 option, with a missing or non-finite value counting as full strength. */
+const unit = (v: number | undefined): number => (Number.isFinite(v) ? clamp01(v as number) : 1);
 
 function load(): Promise<Capabilities> {
 	const next = invoke<Capabilities>('plugin:haptics|capabilities').then(
@@ -92,6 +96,7 @@ export function setMaxTier(t: Tier | null): void {
 
 /** Cancels the motor and clears every queue, pending merge and timer. */
 export async function stop(): Promise<void> {
+	stopCount++;
 	scheduler.stop();
 	await invoke('plugin:haptics|stop');
 }
@@ -128,8 +133,10 @@ export async function register(
 ): Promise<CompileReport> {
 	const caps = await capabilities();
 	assertValid(pattern, caps);
-	patterns.set(id, { pattern: { ...pattern, id }, options: opts });
-	return compilePattern({ ...pattern, id }, caps, {
+	// Copy it, so editing the caller's object later can't change what is registered.
+	const own: Pattern = { ...structuredClone(pattern), id };
+	patterns.set(id, { pattern: own, options: opts });
+	return compilePattern(own, caps, {
 		tier: opts?.tier,
 		maxTier,
 		scale: masterScale,
@@ -149,6 +156,7 @@ export async function registerAll(
 
 export function unregister(id: string): void {
 	patterns.delete(id);
+	scheduler.cancel(id);
 }
 
 const REASON_NOTES = /missing on this motor|drops to tier 2|over the|Capped|Truncated|No envelope/;
@@ -179,7 +187,9 @@ export async function trigger(id: string, opts: TriggerOptions = {}): Promise<Pl
 	const entry = patterns.get(id);
 	if (!entry) throw new HapticsError('UNKNOWN_PATTERN', `No pattern is registered as "${id}".`);
 
+	const stoppedAt = stopCount;
 	const caps = await capabilities();
+	if (stopCount !== stoppedAt) return silent('Stopped before it played', 'dropped');
 	const tier = Math.min(entry.options?.tier ?? 4, opts.tier ?? 4) as Tier;
 	const compileFor = (scale: number): CompileReport =>
 		compilePattern(entry.pattern, caps, {
@@ -190,15 +200,17 @@ export async function trigger(id: string, opts: TriggerOptions = {}): Promise<Pl
 			respectSystemSettings: opts.respectSystemSettings,
 		});
 
-	const first = compileFor(masterScale * clamp01(opts.scale ?? 1));
+	const triggerScale = unit(opts.scale);
+	if (masterScale * triggerScale === 0) return silent('Scale is 0, so nothing plays');
+	const first = compileFor(masterScale * triggerScale);
 	const outcome = await scheduler.submit<PlayResult>({
 		key: id,
 		policy: entry.pattern.policy ?? 'interrupt',
 		estimatedMs: first.estimatedMs,
-		scale: clamp01(opts.scale ?? 1),
+		scale: triggerScale,
 		run: (scale) => {
 			// A merged group arrives with a higher scale, so compile again at that strength.
-			const report = scale === clamp01(opts.scale ?? 1) ? first : compileFor(masterScale * scale);
+			const report = scale === triggerScale ? first : compileFor(masterScale * scale);
 			return playCompiled(report).then((res) => withNotes(res, report, caps));
 		},
 	});
@@ -283,6 +295,7 @@ function scaled(req: EffectRequest): EffectRequest {
  * scale and the `setMaxTier` cap, which resolves a request above the cap at tier 0.
  */
 export async function play(req: EffectRequest): Promise<PlayResult> {
+	if (masterScale === 0) return silent('Master scale is 0, so nothing plays');
 	if (maxTier !== null) {
 		const caps = await capabilities();
 		if (effectTier(req, caps) > maxTier) {

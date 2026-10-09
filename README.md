@@ -68,7 +68,7 @@ await haptics.register('hurt', {
 });
 
 const result = await haptics.trigger('hurt', { scale: 0.8 });
-// { ok: true, tier: 3, estimatedMs: 140, downgraded: false, policy: 'played', … }
+// { ok: true, tier: 3, estimatedMs: 110, downgraded: false, policy: 'played', … }
 ```
 
 `intensity` and `sharpness` run from 0 to 1 and times are in milliseconds, the same units as Core Haptics. `haptics.ui('confirm')` plays system-style feedback that follows the touch-feedback setting, and `haptics.play(request)` is the raw escape hatch.
