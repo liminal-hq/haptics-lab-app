@@ -133,3 +133,6 @@ export type PredefinedEffectId = 'click' | 'double_click' | 'tick' | 'heavy_clic
 
 // System-style feedback that follows the touch-feedback setting (the UI lane).
 export type UiKind = 'confirm' | 'reject' | 'tick' | 'toggle-on' | 'toggle-off' | 'drag-start';
+
+// A request in a compiled pattern, started `atMs` after the first step.
+export type CompiledStep = { atMs: number; request: EffectRequest };

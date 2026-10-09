@@ -206,6 +206,14 @@ pub const PRIMITIVE_IDS: [&str; 7] = [
 
 pub const EFFECT_IDS: [&str; 4] = ["click", "double_click", "tick", "heavy_click"];
 
+/// One request in a compiled pattern, started `at_ms` after the first step.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CompiledStep {
+    pub at_ms: u64,
+    pub request: EffectRequest,
+}
+
 /// System-style feedback for the UI lane, which follows the touch-feedback setting.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -499,5 +507,21 @@ mod tests {
             serde_json::json!("drag-start")
         );
         assert!(serde_json::from_value::<UiKind>(serde_json::json!("shake")).is_err());
+    }
+
+    #[test]
+    fn deserializes_compiled_steps_with_nested_requests() {
+        let raw = serde_json::json!([
+            { "atMs": 0, "request": { "effect": { "type": "predefined", "effectId": "click" } } },
+            { "atMs": 120, "request": {
+                "usage": "media",
+                "effect": { "type": "oneshot", "durationMs": 20, "amplitude": 90 }
+            } }
+        ]);
+
+        let steps: Vec<CompiledStep> = serde_json::from_value(raw).expect("deserialize steps");
+        assert_eq!(steps.len(), 2);
+        assert_eq!(steps[1].at_ms, 120);
+        assert_eq!(steps[1].request.usage.as_deref(), Some("media"));
     }
 }

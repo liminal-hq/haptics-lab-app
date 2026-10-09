@@ -4,6 +4,9 @@ import android.app.Activity
 import android.content.Context
 import android.media.AudioAttributes
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
 import android.os.VibrationAttributes
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -64,6 +67,9 @@ private val PRIMITIVE_MS = mapOf(
 // Rough length of a system UI tick, for the result estimate.
 private const val UI_FEEDBACK_MS = 20L
 
+// The most steps one `play_steps` call may schedule.
+private const val MAX_STEPS = 512
+
 private val PREDEFINED_MS = mapOf("click" to 15L, "double_click" to 60L, "tick" to 10L, "heavy_click" to 30L)
 
 // Nearest supported stand-in, tried in order, when a motor lacks a primitive.
@@ -82,6 +88,8 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
   private val vibrator: Vibrator by lazy { getVibrator(activity) }
 
   private var webView: WebView? = null
+  private val stepHandler = Handler(Looper.getMainLooper())
+  private val stepToken = Any()
 
   override fun load(webView: WebView) {
     this.webView = webView
@@ -271,6 +279,7 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
 
   @Command
   fun stop(invoke: Invoke) {
+    cancelScheduled()
     vibrator.cancel()
     invoke.resolve(JSObject())
   }
@@ -279,11 +288,96 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
   fun play(invoke: Invoke) {
     val argsRoot = invoke.getArgs()
     val args = argsRoot.getJSObject("req") ?: argsRoot
-    val effectObj = args.getJSObject("effect")
-    if (effectObj == null) {
-      invoke.reject("INVALID_EFFECT", "Missing effect payload")
+
+    val prepared = try {
+      prepare(args)
+    } catch (e: Throwable) {
+      invoke.reject("INVALID_EFFECT", e.message ?: "Invalid haptics request")
       return
     }
+
+    when (prepared) {
+      is Prepared.Silent -> invoke.resolve(playResult(0, 0, prepared.reasons))
+      is Prepared.Ready -> {
+        cancelScheduled()
+        if (prepared.stopBefore) vibrator.cancel()
+        vibrate(prepared.built.effect, prepared.usage)
+        invoke.resolve(playResult(prepared.built.tier, prepared.built.estimatedMs, prepared.built.reasons))
+      }
+    }
+  }
+
+  /**
+   * Plays a compiled step list. Every step is validated first, then all are scheduled on one
+   * handler from a single start time so the rhythm between them stays tight. `stop` cancels it.
+   */
+  @Command
+  fun play_steps(invoke: Invoke) {
+    val steps = getArray(invoke.getArgs(), "steps")
+    if (steps.length() == 0) {
+      invoke.reject("INVALID_EFFECT", "steps cannot be empty")
+      return
+    }
+    if (steps.length() > MAX_STEPS) {
+      invoke.reject("INVALID_EFFECT", "steps exceeds the maximum of $MAX_STEPS")
+      return
+    }
+
+    val ready = mutableListOf<Pair<Long, Prepared.Ready>>()
+    val reasons = linkedSetOf<String>()
+    var tier = 0
+    var end = 0L
+    try {
+      for (i in 0 until steps.length()) {
+        val step = getObject(steps, i)
+        if (!step.has("atMs")) throw IllegalArgumentException("steps[$i]: missing field `atMs`")
+        val atMs = step.getLong("atMs")
+        if (atMs < 0) throw IllegalArgumentException("steps[$i]: atMs must not be negative")
+        val request = step.getJSObject("request")
+          ?: throw IllegalArgumentException("steps[$i]: missing field `request`")
+        val prepared = try {
+          prepare(request)
+        } catch (e: IllegalArgumentException) {
+          throw IllegalArgumentException("steps[$i]: ${e.message}")
+        }
+        when (prepared) {
+          is Prepared.Silent -> reasons.addAll(prepared.reasons)
+          is Prepared.Ready -> {
+            ready.add(Pair(atMs, prepared))
+            reasons.addAll(prepared.built.reasons)
+            tier = maxOf(tier, prepared.built.tier)
+            end = maxOf(end, atMs + prepared.built.estimatedMs)
+          }
+        }
+      }
+    } catch (e: Throwable) {
+      invoke.reject("INVALID_EFFECT", e.message ?: "Invalid haptics request")
+      return
+    }
+
+    cancelScheduled()
+    vibrator.cancel()
+    val start = SystemClock.uptimeMillis()
+    for ((atMs, step) in ready) {
+      stepHandler.postAtTime({ vibrate(step.built.effect, step.usage) }, stepToken, start + atMs)
+    }
+    invoke.resolve(playResult(tier, end, reasons.toList()))
+  }
+
+  private fun cancelScheduled() {
+    stepHandler.removeCallbacksAndMessages(stepToken)
+  }
+
+  private sealed class Prepared {
+    /** The request resolves without playing anything. */
+    class Silent(val reasons: List<String>) : Prepared()
+
+    class Ready(val built: Built, val usage: String, val stopBefore: Boolean) : Prepared()
+  }
+
+  /** Turns a request into an effect, or says why nothing will play. Throws for invalid input. */
+  private fun prepare(args: JSObject): Prepared {
+    val effectObj = args.getJSObject("effect") ?: throw IllegalArgumentException("Missing effect payload")
 
     val usage = (args.getString("usage", cfg.defaultUsage ?: "touch") ?: "touch").lowercase()
 
@@ -295,13 +389,11 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
       usage == "touch" && (cfg.respectSystemHapticsSetting ?: true)
     }
     if (respect && touchFeedbackEnabled() == false) {
-      invoke.resolve(playResult(0, 0, listOf("Touch feedback is off in system settings")))
-      return
+      return Prepared.Silent(listOf("Touch feedback is off in system settings"))
     }
 
     if (!vibrator.hasVibrator()) {
-      invoke.resolve(playResult(0, 0, listOf("No vibrator on this device")))
-      return
+      return Prepared.Silent(listOf("No vibrator on this device"))
     }
 
     val stopBefore = if (args.present("stopBeforePlay")) {
@@ -309,21 +401,11 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
     } else {
       cfg.stopBeforePlay ?: true
     }
-    if (stopBefore) vibrator.cancel()
 
     val maxAmp = (cfg.maxAmplitude ?: 255).coerceIn(1, 255)
     val maxDur = (cfg.maxDurationMs ?: 10_000).coerceAtLeast(1)
 
-    val built = try {
-      buildEffect(effectObj, vibrator, maxAmp, maxDur, cfg)
-    } catch (e: Throwable) {
-      invoke.reject("INVALID_EFFECT", e.message ?: "Invalid haptics request")
-      return
-    }
-
-    vibrate(built.effect, usage)
-
-    invoke.resolve(playResult(built.tier, built.estimatedMs, built.reasons))
+    return Prepared.Ready(buildEffect(effectObj, vibrator, maxAmp, maxDur, cfg), usage, stopBefore)
   }
 
   /**

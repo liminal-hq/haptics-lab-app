@@ -319,6 +319,18 @@
           "markdownDescription": "Denies the play command without any pre-configured scope."
         },
         {
+          "description": "Enables the play_steps command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-play-steps",
+          "markdownDescription": "Enables the play_steps command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the play_steps command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-play-steps",
+          "markdownDescription": "Denies the play_steps command without any pre-configured scope."
+        },
+        {
           "description": "Enables the stop command without any pre-configured scope.",
           "type": "string",
           "const": "allow-stop",
@@ -343,10 +355,10 @@
           "markdownDescription": "Denies the ui command without any pre-configured scope."
         },
         {
-          "description": "Default permissions for the haptics plugin\n#### This default permission set includes:\n\n- `allow-capabilities`\n- `allow-play`\n- `allow-stop`\n- `allow-ui`",
+          "description": "Default permissions for the haptics plugin\n#### This default permission set includes:\n\n- `allow-capabilities`\n- `allow-play`\n- `allow-play-steps`\n- `allow-stop`\n- `allow-ui`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Default permissions for the haptics plugin\n#### This default permission set includes:\n\n- `allow-capabilities`\n- `allow-play`\n- `allow-stop`\n- `allow-ui`"
+          "markdownDescription": "Default permissions for the haptics plugin\n#### This default permission set includes:\n\n- `allow-capabilities`\n- `allow-play`\n- `allow-play-steps`\n- `allow-stop`\n- `allow-ui`"
         }
       ]
     }

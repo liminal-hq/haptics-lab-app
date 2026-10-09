@@ -5,6 +5,11 @@ use crate::{models::*, Result};
 pub struct Haptics<R: Runtime>(pub PluginHandle<R>);
 
 #[derive(serde::Serialize)]
+struct PlayStepsArgs {
+    steps: Vec<CompiledStep>,
+}
+
+#[derive(serde::Serialize)]
 struct UiArgs {
     kind: UiKind,
 }
@@ -19,6 +24,12 @@ impl<R: Runtime> Haptics<R> {
     pub fn play(&self, req: EffectRequest) -> Result<PlayResult> {
         self.0
             .run_mobile_plugin("play", req)
+            .map_err(|e| crate::Error::MobilePluginInvoke(e.to_string()))
+    }
+
+    pub fn play_steps(&self, steps: Vec<CompiledStep>) -> Result<PlayResult> {
+        self.0
+            .run_mobile_plugin("play_steps", PlayStepsArgs { steps })
             .map_err(|e| crate::Error::MobilePluginInvoke(e.to_string()))
     }
 
