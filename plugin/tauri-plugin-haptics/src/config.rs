@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "camelCase")]
 pub struct Config {
     pub default_usage: Option<String>,
+    /// Respect the system touch-feedback setting for `touch` usage. Other usages ignore it unless
+    /// a request sets `respectSystemSettings`.
     pub respect_system_haptics_setting: Option<bool>,
     pub stop_before_play: Option<bool>,
     pub max_duration_ms: Option<u64>,

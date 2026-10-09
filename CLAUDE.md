@@ -8,7 +8,7 @@ Haptics Lab is a Tauri v2 app for exploring, authoring and replaying haptic patt
 
 ## Status
 
-Early development. The plugin plays one-shot, waveform, predefined, composition and envelope (API 36+) effects and reports capabilities. The app opens on a short splash (animated icon plus a matching vibration), then shows a capabilities readout, one-shot and click buttons, a waveform editor with repeat, and an envelope editor. Composition editing, a pattern library and import/export are not built yet. Kotlin changes are verified by the CI Android build (JDK 17) and on a device — say so in PR test plans when you couldn't. The test phone, a Pixel 8 Pro, has no envelope support in its vibrator hardware, so envelope playback falls back there.
+Early development. The plugin plays one-shot, waveform, predefined, composition and envelope (API 36+) effects, schedules compiled step lists natively, has a UI feedback lane, and compiles portable patterns down a five-tier ladder (`register` / `trigger` / `compile`). The app opens on a short splash (animated icon plus a matching vibration), then a five-tab lab: Bench, Cues, Compare, Raw and Device. Kotlin changes are verified by the CI Android build (JDK 17) and on a device — say so in PR test plans when you couldn't. The test phone, a Pixel 8 Pro, has no envelope support in its vibrator hardware, so envelope playback falls back there.
 
 ## Layout
 
@@ -32,9 +32,11 @@ Bun workspace plus Cargo workspace; `AGENTS.md`'s [Repository Layout](AGENTS.md#
 ## Architecture — the key things to understand
 
 - **One contract, three languages.** A request shape lives in `guest-js/src/types.ts`, `src/models.rs` and the Kotlin parser in `HapticsPlugin.kt`. Change all three together, plus `SPEC.md` and tests.
-- **Capability-gated, never silent.** Unsupported features return `downgraded` and `downgradeReason`; `capabilities()` exposes limits (including `envelopeInfo`) so the UI validates before playing. See `AGENTS.md` → Haptics Plugin Rules.
+- **Capability-gated, never silent.** Unsupported features return `downgraded` and a `reason` (plus the deprecated `downgradeReason` alias for one release); `capabilities()` exposes limits (including `envelopeInfo`) so the UI validates before playing. See `AGENTS.md` → Haptics Plugin Rules.
 - **Safety defaults.** Repeating waveforms are opt-in via config, duration and amplitude are capped, and Stop is always wired.
 - **Envelope amplitude is 0–1** (unlike waveform amplitude, 0–255), with frequencies bounded by the device frequency profile.
+- **Patterns are pure TypeScript.** `guest-js/src/pattern/` (types, `validatePattern`, `compilePattern`, `PatternScheduler`) must not import `@tauri-apps/*` or `../index`; native code only runs compiled requests.
+- **Theme from Material You.** Colours come from the device palette via `theme/roles.ts` and the MUI theme (or `--lab-*` variables), never from literals.
 - **Pure logic out of components.** Validation and payload building live in `src/utils/` with unit tests.
 - **Capabilities ACL.** New plugin commands need `permissions/default.toml` entries and a grant in `src-tauri/capabilities/`, or `invoke()` silently fails. Logging forwarding needs `log:default`, granted in `capabilities/logging.json`.
 - **One log stream.** `services/logger.ts` (`initLogger('main')`) forwards webview `console.*` into `tauri-plugin-log`; `console.log` maps to `info`. See `AGENTS.md` → Logging.

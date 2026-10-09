@@ -26,7 +26,7 @@ This repository is built largely by autonomous coding agents. The rules below ar
 
 ## Project Status
 
-Haptics Lab is an early-stage Tauri v2 app for exploring, authoring and replaying haptic patterns on Android, built on a purpose-written `tauri-plugin-haptics`. The plugin plays one-shot, waveform, predefined, composition and (Android 16 / API 36+) envelope effects, and reports device capabilities. The app opens on a short splash (the animated app icon with a matching vibration) and then shows a small UI: capabilities readout, one-shot and click buttons, a waveform editor and an envelope editor. Composition editing, a pattern library and import/export are still to come. See `SPEC.md` and `docs/` for the plan.
+Haptics Lab is an early-stage Tauri v2 app for exploring, authoring and replaying haptic patterns on Android, built on a purpose-written `tauri-plugin-haptics`. The plugin plays one-shot, waveform, predefined, composition and (Android 16 / API 36+) envelope effects, and reports device capabilities. The app opens on a short splash (the animated app icon with a matching vibration) and then shows a five-tab lab: Bench (author a portable pattern and see what it compiles to), Cues (a game's cue table), Compare (tiers, strengths and policies), Raw (one editor per effect type and the UI lane) and Device (the capability readout and tier ladder). Patterns compile down a five-tier ladder (envelope, primitives, amplitude, on/off, off) in pure TypeScript under `plugin/tauri-plugin-haptics/guest-js/src/pattern/`. See `SPEC.md` and `docs/` for the plan.
 
 ## Localization and Spelling
 
@@ -201,7 +201,7 @@ Use Tauri v2 APIs and patterns. Avoid v1 patterns.
 
 - **Public JS contract stays stable.** `capabilities()`, `play(req)` and `stop()` are the core contract. Changes to request or response shapes update `SPEC.md`, the TypeScript and Rust models, the Kotlin parser, docs and tests together.
 - **Safety first.** Never enable repeating haptics by default (`allowRepeatingWaveforms` stays opt-in), keep duration and amplitude caps enforced in the plugin, and always keep an immediate **Stop** path wired UI → plugin.
-- **Capability-gated and honest.** If a feature is unsupported on the device or SDK (amplitude control, composition primitives, envelopes), degrade gracefully and return `downgraded` with a `downgradeReason`. Never silently substitute a different effect. Surface capability limits through `capabilities()` so the UI can pre-validate.
+- **Capability-gated and honest.** If a feature is unsupported on the device or SDK (amplitude control, composition primitives, envelopes), degrade gracefully and return `downgraded` with a `reason` (the deprecated `downgradeReason` alias is sent for one release). Never silently substitute a different effect. Surface capability limits through `capabilities()` so the UI can pre-validate.
 - **Validate at the boundary.** Reject malformed requests with `INVALID_EFFECT` and a message naming the offending field or index.
 - **Android permissions are owned by the plugin.** Inject them at build time with `tauri_plugin::mobile::update_android_manifest()` from `build.rs`, using the block identifier `tauri-plugin-haptics.permissions`. Never require app developers to edit Android manifests by hand.
 - **API-level gating.** The plugin compiles against `compileSdk = 36`, `minSdk = 24`. Guard newer APIs behind `Build.VERSION.SDK_INT` checks and never reference them from code that runs on older devices.

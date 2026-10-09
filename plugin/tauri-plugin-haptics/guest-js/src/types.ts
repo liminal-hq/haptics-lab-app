@@ -29,10 +29,7 @@ export type Waveform = {
 
 export type Composition = {
 	type: 'composition';
-	steps: Array<
-		| { kind: 'primitive'; primitive: PrimitiveId; scale?: number; delayMs?: number }
-		| { kind: 'effect'; effect: PredefinedEffectId; delayMs?: number }
-	>;
+	steps: Array<{ kind: 'primitive'; primitive: PrimitiveId; scale?: number; delayMs?: number }>;
 };
 
 export type Predefined = {
@@ -48,38 +45,94 @@ export type EnvelopeWaveform = {
 	controlPoints: Array<{ amplitude: number; frequencyHz: number; durationMs: number }>;
 };
 
+export type Tier = 0 | 1 | 2 | 3 | 4;
+
+export type Platform = 'android' | 'ios' | 'desktop' | 'web';
+
+export type Support = 'yes' | 'no' | 'unknown';
+
+export type PrimitiveSupport = {
+	supported: boolean;
+	durationMs: number | null; // measured on this motor (API 31+), null when unknown
+};
+
+export type EnvelopeInfo = {
+	maxSize: number;
+	minControlPointDurationMs: number;
+	maxControlPointDurationMs: number;
+	maxDurationMs: number;
+	frequencyProfile?: {
+		minHz: number;
+		maxHz: number;
+	};
+};
+
 export type Capabilities = {
+	platform: Platform;
+	sdkInt?: number; // Android only
 	hasVibrator: boolean;
 	hasAmplitudeControl: boolean;
-	effectsSupport?: Record<PredefinedEffectId, 'yes' | 'no' | 'unknown'>;
+	topTier: Tier; // 0 no vibrator, 4 envelope, 3 primitives, 2 amplitude, 1 on/off
 
-	// Composition primitives
+	// Composition primitives, reported one by one
 	compositionSupported: boolean;
-	primitives?: Record<PrimitiveId, boolean>;
+	primitives: Record<PrimitiveId, PrimitiveSupport>;
+
+	// Predefined effects (API 30+; 'unknown' below)
+	effects: Record<PredefinedEffectId, Support>;
 
 	// Envelope effects (API 36)
 	envelopeSupported: boolean;
-	envelopeInfo?: {
-		maxSize: number;
-		minControlPointDurationMs: number;
-		maxControlPointDurationMs: number;
+	envelopeInfo?: EnvelopeInfo;
+
+	resonantHz?: number; // API 31
+	qFactor?: number; // API 31
+
+	// System toggle behind touch-usage and UI-lane haptics; null when unreadable
+	touchFeedbackEnabled: boolean | null;
+	/** @deprecated Use `touchFeedbackEnabled`. Kept for one release. */
+	hapticFeedbackEnabled?: boolean;
+
+	// Plugin limits, so pure-TS code can clamp without reading the config
+	limits: {
 		maxDurationMs: number;
-		frequencyProfile?: {
-			minHz: number;
-			maxHz: number;
-		};
+		maxAmplitude: number;
+		allowRepeatingWaveforms: boolean;
 	};
 
-	// System toggles
-	hapticFeedbackEnabled?: boolean;
+	device: {
+		manufacturer: string;
+		model: string;
+		release: string; // OS version, for example "16"
+	};
 };
 
 export type PlayResult = {
-	ok: boolean;
-	downgraded?: boolean;
+	ok: true; // invalid input rejects; hardware limits never make this false
+	tier: Tier; // the tier that played
+	target: 'phone';
+	estimatedMs: number;
+	downgraded: boolean;
+	reason?: string; // why, in one sentence; several reasons are joined with ' · '
+	policy?: 'played' | 'queued' | 'dropped' | 'coalesced';
+	/** @deprecated Use `reason`. Kept for one release. */
 	downgradeReason?: string;
 };
 
-export type PrimitiveId = 'tick' | 'click' | 'thud' | 'spin' | 'quick_rise' | 'slow_rise';
+export type PrimitiveId =
+	| 'tick'
+	| 'low_tick'
+	| 'click'
+	| 'thud'
+	| 'spin'
+	| 'quick_rise'
+	| 'slow_rise';
 
-export type PredefinedEffectId = 'click' | 'double_click' | 'tick' | 'thud' | 'pop' | 'heavy_click';
+// `thud` and `pop` are not predefined effects; use the `thud` composition primitive.
+export type PredefinedEffectId = 'click' | 'double_click' | 'tick' | 'heavy_click';
+
+// System-style feedback that follows the touch-feedback setting (the UI lane).
+export type UiKind = 'confirm' | 'reject' | 'tick' | 'toggle-on' | 'toggle-off' | 'drag-start';
+
+// A request in a compiled pattern, started `atMs` after `playSteps` is called.
+export type CompiledStep = { atMs: number; request: EffectRequest };

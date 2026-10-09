@@ -62,6 +62,30 @@ impl<R: Runtime> HapticsState<R> {
         }
     }
 
+    pub fn play_steps(&self, steps: Vec<models::CompiledStep>) -> Result<models::PlayResult> {
+        #[cfg(any(target_os = "android", target_os = "ios"))]
+        {
+            return self.mobile.play_steps(steps);
+        }
+
+        #[cfg(not(any(target_os = "android", target_os = "ios")))]
+        {
+            self.desktop.play_steps(steps)
+        }
+    }
+
+    pub fn ui(&self, kind: models::UiKind) -> Result<models::PlayResult> {
+        #[cfg(any(target_os = "android", target_os = "ios"))]
+        {
+            return self.mobile.ui(kind);
+        }
+
+        #[cfg(not(any(target_os = "android", target_os = "ios")))]
+        {
+            self.desktop.ui(kind)
+        }
+    }
+
     pub fn stop(&self) -> Result<()> {
         #[cfg(any(target_os = "android", target_os = "ios"))]
         {
@@ -91,6 +115,8 @@ pub fn init<R: Runtime>() -> TauriPlugin<R, Option<config::Config>> {
         .invoke_handler(tauri::generate_handler![
             commands::capabilities,
             commands::play,
+            commands::play_steps,
+            commands::ui,
             commands::stop,
         ])
         .setup(|app, api| {
@@ -106,11 +132,11 @@ pub fn init<R: Runtime>() -> TauriPlugin<R, Option<config::Config>> {
 
             app.manage(HapticsState {
                 app: app.clone(),
-                config,
+                config: config.clone(),
                 #[cfg(any(target_os = "android", target_os = "ios"))]
                 mobile: mobile::Haptics(handle),
                 #[cfg(not(any(target_os = "android", target_os = "ios")))]
-                desktop: desktop::Haptics,
+                desktop: desktop::Haptics::new(config),
             });
 
             Ok(())

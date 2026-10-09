@@ -1,3 +1,5 @@
+> **Superseded.** This is the original plan and is kept for context. The current contract is in `SPEC.md`, and the v2 tier ladder, pattern API and lab are described there and in the root `README.md`. Where this document disagrees (for example `thud` and `pop` as predefined effects, `downgradeReason`, or composition `effect` steps), `SPEC.md` wins.
+
 # Tauri v2 Android Haptics Plugin (tauri-plugin-haptics)
 
 # Goal
