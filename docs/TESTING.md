@@ -36,7 +36,7 @@ Run on the test phone (a Pixel 8 Pro: primitives and amplitude control, no envel
 - **Device tab**: the tier ladder highlights tier 3; envelope effects read "Not on this actuator"; every primitive shows a measured duration; resonant frequency is reported; "Preview a weaker phone" greys out tier 4 with the reason.
 - **Capabilities**: `topTier` is 3 and `touchFeedbackEnabled` matches Settings → Sound & vibration → Touch feedback.
 - **Raw**: every mode plays and none throws. The predefined tiles show what the device confirms. A composition with a missing primitive names the neighbour. Envelope is greyed with a banner, and Play falls back to a tick and the transport says so.
-- **Touch feedback off**: `usage: touch` plays and the UI lane tiles stay silent with a reason; a `media` pattern still plays.
+- **Touch feedback off**: a `touch` play and the UI lane tiles stay silent and the transport says "Touch feedback is off in system settings"; a `media` pattern still plays.
 - **Bench**: the hurt cue compiles at tier 3, tier 2 and tier 1 and each feels different; Stop ends playback immediately.
 - **Cues**: "Every cue at every tier" runs without errors and Stop ends it.
 - **Compare**: the strength ladder finds a felt threshold; the policy bench Fire button shows the played, queued and dropped results in Results.
