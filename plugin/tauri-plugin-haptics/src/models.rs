@@ -206,6 +206,18 @@ pub const PRIMITIVE_IDS: [&str; 7] = [
 
 pub const EFFECT_IDS: [&str; 4] = ["click", "double_click", "tick", "heavy_click"];
 
+/// System-style feedback for the UI lane, which follows the touch-feedback setting.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum UiKind {
+    Confirm,
+    Reject,
+    Tick,
+    ToggleOn,
+    ToggleOff,
+    DragStart,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlayResult {
@@ -467,5 +479,25 @@ mod tests {
         let wave = serde_json::to_value(wave).expect("serialize waveform");
         assert!(wave["effect"].get("amplitudes").is_none());
         assert!(wave["effect"].get("repeat").is_none());
+    }
+
+    #[test]
+    fn ui_kinds_use_kebab_case_names() {
+        let kinds: Vec<UiKind> = serde_json::from_value(serde_json::json!([
+            "confirm",
+            "reject",
+            "tick",
+            "toggle-on",
+            "toggle-off",
+            "drag-start"
+        ]))
+        .expect("deserialize ui kinds");
+        assert_eq!(kinds.len(), 6);
+        assert_eq!(kinds[3], UiKind::ToggleOn);
+        assert_eq!(
+            serde_json::to_value(UiKind::DragStart).expect("serialize ui kind"),
+            serde_json::json!("drag-start")
+        );
+        assert!(serde_json::from_value::<UiKind>(serde_json::json!("shake")).is_err());
     }
 }

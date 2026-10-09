@@ -9,6 +9,7 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import android.provider.Settings
+import android.view.HapticFeedbackConstants
 import android.webkit.WebView
 import app.tauri.annotation.Command
 import app.tauri.annotation.InvokeArg
@@ -60,6 +61,9 @@ private val PRIMITIVE_MS = mapOf(
   "quick_rise" to 60, "slow_rise" to 150, "spin" to 90,
 )
 
+// Rough length of a system UI tick, for the result estimate.
+private const val UI_FEEDBACK_MS = 20L
+
 private val PREDEFINED_MS = mapOf("click" to 15L, "double_click" to 60L, "tick" to 10L, "heavy_click" to 30L)
 
 // Nearest supported stand-in, tried in order, when a motor lacks a primitive.
@@ -77,7 +81,10 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
   private var cfg = PluginConfigArgs()
   private val vibrator: Vibrator by lazy { getVibrator(activity) }
 
+  private var webView: WebView? = null
+
   override fun load(webView: WebView) {
+    this.webView = webView
     // Pull config from tauri.conf.json if present
     runCatching { getConfig(PluginConfigArgs::class.java) }.onSuccess {
       cfg = it
@@ -204,6 +211,62 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
       out.put(id, label)
     }
     return out
+  }
+
+  /**
+   * The UI lane: system-style feedback through `View.performHapticFeedback`, which the OS tunes and
+   * which follows the touch-feedback setting. Newer constants fall back on older releases.
+   */
+  @Command
+  fun ui(invoke: Invoke) {
+    val kind = invoke.getArgs().getString("kind")
+    val choice = uiFeedback(kind)
+    if (choice == null) {
+      invoke.reject("INVALID_EFFECT", "Unknown UI feedback kind: $kind")
+      return
+    }
+
+    if (!vibrator.hasVibrator()) {
+      invoke.resolve(playResult(0, 0, listOf("No vibrator on this device")))
+      return
+    }
+    if (touchFeedbackEnabled() == false) {
+      invoke.resolve(playResult(0, 0, listOf("Touch feedback is off in system settings")))
+      return
+    }
+    val view = webView
+    if (view == null) {
+      invoke.resolve(playResult(0, 0, listOf("The web view is not ready")))
+      return
+    }
+
+    val tier = minOf(deviceTopTier(), 3)
+    activity.runOnUiThread {
+      val played = runCatching { view.performHapticFeedback(choice.first) }.getOrDefault(false)
+      val reasons = mutableListOf<String>()
+      if (choice.second != null) reasons.add(choice.second!!)
+      if (!played) reasons.add("The system did not play the feedback")
+      invoke.resolve(playResult(if (played) tier else 0, if (played) UI_FEEDBACK_MS else 0, reasons))
+    }
+  }
+
+  /** (constant, fallback note) for a UI kind; null for an unknown kind. */
+  private fun uiFeedback(kind: String?): Pair<Int, String?>? {
+    val sdk = Build.VERSION.SDK_INT
+    return when (kind) {
+      "confirm" -> if (sdk >= 30) Pair(HapticFeedbackConstants.CONFIRM, null)
+        else Pair(HapticFeedbackConstants.CLOCK_TICK, "CONFIRM needs API 30; fell back to CLOCK_TICK")
+      "reject" -> if (sdk >= 30) Pair(HapticFeedbackConstants.REJECT, null)
+        else Pair(HapticFeedbackConstants.CONTEXT_CLICK, "REJECT needs API 30; fell back to CONTEXT_CLICK")
+      "tick" -> Pair(HapticFeedbackConstants.CLOCK_TICK, null)
+      "toggle-on" -> if (sdk >= 34) Pair(HapticFeedbackConstants.TOGGLE_ON, null)
+        else Pair(HapticFeedbackConstants.CLOCK_TICK, "TOGGLE_ON needs API 34; fell back to CLOCK_TICK")
+      "toggle-off" -> if (sdk >= 34) Pair(HapticFeedbackConstants.TOGGLE_OFF, null)
+        else Pair(HapticFeedbackConstants.CLOCK_TICK, "TOGGLE_OFF needs API 34; fell back to CLOCK_TICK")
+      "drag-start" -> if (sdk >= 34) Pair(HapticFeedbackConstants.DRAG_START, null)
+        else Pair(HapticFeedbackConstants.CLOCK_TICK, "DRAG_START needs API 34; fell back to CLOCK_TICK")
+      else -> null
+    }
   }
 
   @Command

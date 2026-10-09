@@ -16,6 +16,11 @@ pub fn play<R: Runtime>(
 }
 
 #[command]
+pub fn ui<R: Runtime>(app: AppHandle<R>, kind: UiKind) -> std::result::Result<PlayResult, String> {
+    app.haptics().ui(kind).map_err(|e| e.to_string())
+}
+
+#[command]
 pub fn stop<R: Runtime>(app: AppHandle<R>) -> std::result::Result<(), String> {
     app.haptics().stop().map_err(|e| e.to_string())
 }

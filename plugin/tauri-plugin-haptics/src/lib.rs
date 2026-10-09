@@ -62,6 +62,18 @@ impl<R: Runtime> HapticsState<R> {
         }
     }
 
+    pub fn ui(&self, kind: models::UiKind) -> Result<models::PlayResult> {
+        #[cfg(any(target_os = "android", target_os = "ios"))]
+        {
+            return self.mobile.ui(kind);
+        }
+
+        #[cfg(not(any(target_os = "android", target_os = "ios")))]
+        {
+            self.desktop.ui(kind)
+        }
+    }
+
     pub fn stop(&self) -> Result<()> {
         #[cfg(any(target_os = "android", target_os = "ios"))]
         {
@@ -91,6 +103,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R, Option<config::Config>> {
         .invoke_handler(tauri::generate_handler![
             commands::capabilities,
             commands::play,
+            commands::ui,
             commands::stop,
         ])
         .setup(|app, api| {

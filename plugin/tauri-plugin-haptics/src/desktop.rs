@@ -27,6 +27,10 @@ impl Haptics {
         Ok(PlayResult::silent("No vibrator on this platform"))
     }
 
+    pub fn ui(&self, _kind: UiKind) -> Result<PlayResult> {
+        Ok(PlayResult::silent("No vibrator on this platform"))
+    }
+
     pub fn stop(&self) -> Result<()> {
         Ok(())
     }

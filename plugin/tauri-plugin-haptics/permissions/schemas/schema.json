@@ -331,10 +331,22 @@
           "markdownDescription": "Denies the stop command without any pre-configured scope."
         },
         {
-          "description": "Default permissions for the haptics plugin\n#### This default permission set includes:\n\n- `allow-capabilities`\n- `allow-play`\n- `allow-stop`",
+          "description": "Enables the ui command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-ui",
+          "markdownDescription": "Enables the ui command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the ui command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-ui",
+          "markdownDescription": "Denies the ui command without any pre-configured scope."
+        },
+        {
+          "description": "Default permissions for the haptics plugin\n#### This default permission set includes:\n\n- `allow-capabilities`\n- `allow-play`\n- `allow-stop`\n- `allow-ui`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Default permissions for the haptics plugin\n#### This default permission set includes:\n\n- `allow-capabilities`\n- `allow-play`\n- `allow-stop`"
+          "markdownDescription": "Default permissions for the haptics plugin\n#### This default permission set includes:\n\n- `allow-capabilities`\n- `allow-play`\n- `allow-stop`\n- `allow-ui`"
         }
       ]
     }

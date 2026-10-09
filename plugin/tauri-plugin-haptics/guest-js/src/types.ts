@@ -130,3 +130,6 @@ export type PrimitiveId =
 
 // `thud` and `pop` are not predefined effects; use the `thud` composition primitive.
 export type PredefinedEffectId = 'click' | 'double_click' | 'tick' | 'heavy_click';
+
+// System-style feedback that follows the touch-feedback setting (the UI lane).
+export type UiKind = 'confirm' | 'reject' | 'tick' | 'toggle-on' | 'toggle-off' | 'drag-start';

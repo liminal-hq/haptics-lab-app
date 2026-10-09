@@ -7,6 +7,7 @@ Default permissions for the haptics plugin
 - `allow-capabilities`
 - `allow-play`
 - `allow-stop`
+- `allow-ui`
 
 ## Permission Table
 
@@ -91,6 +92,32 @@ Enables the stop command without any pre-configured scope.
 <td>
 
 Denies the stop command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`haptics:allow-ui`
+
+</td>
+<td>
+
+Enables the ui command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`haptics:deny-ui`
+
+</td>
+<td>
+
+Denies the ui command without any pre-configured scope.
 
 </td>
 </tr>
