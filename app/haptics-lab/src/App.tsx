@@ -5,14 +5,15 @@ import QueueMusicRounded from '@mui/icons-material/QueueMusicRounded';
 import CompareArrowsRounded from '@mui/icons-material/CompareArrowsRounded';
 import DataObjectRounded from '@mui/icons-material/DataObjectRounded';
 import MemoryRounded from '@mui/icons-material/MemoryRounded';
-import ComingSoon from './components/ComingSoon';
 import SplashScreen from './components/SplashScreen';
 import TopBar from './components/TopBar';
 import TransportBar from './components/TransportBar';
 import { LabProvider, useLab } from './context/LabContext';
-import { usePersistentState } from './hooks/usePersistentState';
+import { usePersistentState, writeStored } from './hooks/usePersistentState';
+import type { BenchState } from './utils/bench';
 import BenchScreen from './screens/BenchScreen';
 import CompareScreen from './screens/CompareScreen';
+import CuesScreen from './screens/CuesScreen';
 import DeviceScreen from './screens/DeviceScreen';
 import RawScreen from './screens/RawScreen';
 
@@ -41,7 +42,23 @@ function Shell() {
 			<Box component="main" sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
 				{tab === 'bench' ? <BenchScreen /> : null}
 				{tab === 'cues' ? (
-					<ComingSoon title="Cues">Load a game's cue table and play every cue.</ComingSoon>
+					<CuesScreen
+						onOpenBench={(cue) => {
+							if (cue.pattern) {
+								writeStored<BenchState>('bench', {
+									name: cue.id,
+									usage: cue.pattern.usage ?? 'media',
+									policy: cue.pattern.policy ?? 'interrupt',
+									events: cue.pattern.events,
+								});
+							}
+							setTab('bench');
+						}}
+						onOpenUiLane={() => {
+							writeStored('raw-mode', 'ui');
+							setTab('raw');
+						}}
+					/>
 				) : null}
 				{tab === 'compare' ? <CompareScreen /> : null}
 				{tab === 'raw' ? <RawScreen /> : null}
