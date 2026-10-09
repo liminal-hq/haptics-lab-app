@@ -133,6 +133,7 @@ describe('validatePattern', () => {
 		expect(validatePattern({ ...ok, policy: 'queue' })).toEqual([]);
 		expect(messages({ ...ok, policy: 'spam' })[0]).toContain('policy: spam is not a policy');
 		expect(messages({ ...ok, policy: { coalesce: 0 } })[0]).toContain('policy: Not a policy');
+		expect(messages({ ...ok, policy: { coalesce: 5000 } })[0]).toContain('from 1 to 1000');
 	});
 
 	it('formats issues one per line', () => {

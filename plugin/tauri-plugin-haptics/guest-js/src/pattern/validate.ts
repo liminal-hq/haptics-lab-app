@@ -19,6 +19,9 @@ export type ValidateOptions = {
 const USAGES = ['touch', 'notification', 'alarm', 'media'];
 const POLICIES = ['interrupt', 'queue', 'drop-if-busy'];
 
+/** Longest coalesce window; far above this a timer would be a bug, not a window. */
+const MAX_COALESCE_MS = 1000;
+
 function isRecord(v: unknown): v is Record<string, unknown> {
 	return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
@@ -197,11 +200,17 @@ function checkPolicy(policy: unknown, issues: ValidationIssue[]): void {
 		}
 		return;
 	}
-	if (isRecord(policy) && isNumber(policy.coalesce) && policy.coalesce > 0) return;
+	if (
+		isRecord(policy) &&
+		isNumber(policy.coalesce) &&
+		policy.coalesce > 0 &&
+		policy.coalesce <= MAX_COALESCE_MS
+	) {
+		return;
+	}
 	issues.push({
 		path: 'policy',
-		message:
-			'Not a policy. Use interrupt, queue, drop-if-busy or { coalesce: ms } with ms above 0.',
+		message: `Not a policy. Use interrupt, queue, drop-if-busy or { coalesce: ms } with ms from 1 to ${MAX_COALESCE_MS}.`,
 	});
 }
 
