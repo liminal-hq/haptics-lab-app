@@ -153,6 +153,45 @@ describe('stop', () => {
 	});
 });
 
+describe('failures and cancel', () => {
+	it('is not busy after a play that failed', async () => {
+		const failing: Job<number> = {
+			...job('drop-if-busy', 1000),
+			run: async () => {
+				throw new Error('refused');
+			},
+		};
+		await expect(scheduler.submit(failing)).rejects.toThrow('refused');
+		expect(scheduler.isBusy('cue')).toBe(false);
+		expect((await scheduler.submit(job('drop-if-busy', 1000))).policy).toBe('played');
+	});
+
+	it('settles a queued trigger whose run throws synchronously', async () => {
+		await scheduler.submit(job('queue', 100));
+		const throwing: Job<number> = {
+			...job('queue', 100),
+			run: () => {
+				throw new Error('boom');
+			},
+		};
+		const queued = scheduler.submit(throwing);
+		const assertion = expect(queued).rejects.toThrow('boom');
+		await vi.advanceTimersByTimeAsync(200);
+		await assertion;
+	});
+
+	it('cancels one pattern and leaves the others', async () => {
+		const queued = [scheduler.submit(job('queue')), scheduler.submit(job('queue'))];
+		const other = await scheduler.submit({ ...job('drop-if-busy', 1000), key: 'other' });
+		scheduler.cancel('cue');
+		await vi.runAllTimersAsync();
+		expect((await Promise.all(queued)).map((o) => o.policy)).toEqual(['played', 'dropped']);
+		expect(other.policy).toBe('played');
+		expect(scheduler.isBusy('other')).toBe(true);
+		expect(scheduler.isBusy('cue')).toBe(false);
+	});
+});
+
 describe('keys', () => {
 	it('keeps busy state separate per pattern', async () => {
 		await scheduler.submit(job('drop-if-busy', 1000));

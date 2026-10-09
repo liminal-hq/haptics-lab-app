@@ -87,6 +87,14 @@ export class PatternScheduler {
 		return st !== undefined && Date.now() < st.busyUntil;
 	}
 
+	/** Cancels one pattern's queued, merged and pending triggers and forgets its state. */
+	cancel(key: string): void {
+		const st = this.state.get(key);
+		if (!st) return;
+		this.clear(st);
+		this.state.delete(key);
+	}
+
 	/** Cancels every queued, merged and pending trigger and clears the busy state. */
 	stop(): void {
 		for (const st of this.state.values()) this.clear(st);
@@ -123,8 +131,14 @@ export class PatternScheduler {
 		policy: Decision,
 	): Promise<Outcome<R>> {
 		st.busyUntil = Date.now() + job.estimatedMs;
-		const result = await job.run(Math.min(1, scale));
-		return { policy, result };
+		try {
+			const result = await job.run(Math.min(1, scale));
+			return { policy, result };
+		} catch (err) {
+			// A play that failed never ran, so the pattern is not busy.
+			st.busyUntil = 0;
+			throw err;
+		}
 	}
 
 	private enqueue<R>(st: KeyState<R>, job: Job<R>): Promise<Outcome<R>> {
@@ -138,7 +152,10 @@ export class PatternScheduler {
 				settle: resolve,
 				timer: setTimeout(() => {
 					st.queue = st.queue.filter((w) => w !== entry);
-					job.run(job.scale).then((result) => resolve({ policy: 'queued', result }), reject);
+					// Start from a promise so a synchronous throw in `run` rejects instead of escaping.
+					Promise.resolve()
+						.then(() => job.run(job.scale))
+						.then((result) => resolve({ policy: 'queued', result }), reject);
 				}, wait),
 			};
 			st.queue.push(entry);
