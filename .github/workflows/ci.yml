@@ -13,7 +13,7 @@ jobs:
   lint-and-test:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/liminal-hq/tauri-ci-desktop:latest
+      image: ghcr.io/liminal-hq/tauri-ci-desktop:20261009-2d6e4fc@sha256:f35ef8c593216e0135ee3fccd3ae16a7c90d428fd92992db01a0bcff13f1c3ea
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}

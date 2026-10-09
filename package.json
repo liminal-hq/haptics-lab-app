@@ -2,7 +2,7 @@
 	"name": "haptics-lab-monorepo",
 	"private": true,
 	"type": "module",
-	"packageManager": "bun@1.3.10",
+	"packageManager": "bun@1.3.14",
 	"workspaces": [
 		"plugin/*",
 		"plugin/*/guest-js",
