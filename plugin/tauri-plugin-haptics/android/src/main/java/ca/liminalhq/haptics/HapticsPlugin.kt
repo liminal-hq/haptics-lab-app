@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.media.AudioAttributes
 import android.os.Build
+import android.os.VibrationAttributes
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
@@ -221,14 +222,17 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
       return
     }
 
-    // honour system setting if configured
+    val usage = (args.getString("usage", cfg.defaultUsage ?: "touch") ?: "touch").lowercase()
+
+    // The touch-feedback setting gates touch-usage haptics only, so a media or alarm rumble is not
+    // muted by it. An explicit `respectSystemSettings` on the request still wins.
     val respect = if (args.present("respectSystemSettings")) {
       args.getBoolean("respectSystemSettings")
     } else {
-      cfg.respectSystemHapticsSetting ?: true
+      usage == "touch" && (cfg.respectSystemHapticsSetting ?: true)
     }
     if (respect && touchFeedbackEnabled() == false) {
-      invoke.resolve(playResult(0, 0, listOf("System touch haptics disabled")))
+      invoke.resolve(playResult(0, 0, listOf("Touch feedback is off in system settings")))
       return
     }
 
@@ -254,18 +258,33 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
       return
     }
 
-    val usage = args.getString("usage", cfg.defaultUsage ?: "touch") ?: "touch"
-    val aa = audioAttributesForUsage(usage, cfg)
-
-    // API surface differs by SDK; AudioAttributes works broadly.
-    if (Build.VERSION.SDK_INT >= 21) {
-      vibrator.vibrate(built.effect, aa)
-    } else {
-      // Very old fallback (unlikely in practice with Tauri minSdk)
-      vibrator.vibrate(200)
-    }
+    vibrate(built.effect, usage)
 
     invoke.resolve(playResult(built.tier, built.estimatedMs, built.reasons))
+  }
+
+  /**
+   * API 33+ takes `VibrationAttributes`, which carry the real usage (touch, notification, alarm,
+   * media); older releases get the nearest `AudioAttributes` usage.
+   */
+  private fun vibrate(effect: VibrationEffect, usage: String) {
+    if (Build.VERSION.SDK_INT >= 33) {
+      val attrs = runCatching {
+        VibrationAttributes.createForUsage(vibrationUsage(usage))
+      }.getOrNull()
+      if (attrs != null) {
+        vibrator.vibrate(effect, attrs)
+        return
+      }
+    }
+    vibrator.vibrate(effect, audioAttributesForUsage(usage, cfg))
+  }
+
+  private fun vibrationUsage(usage: String): Int = when (usage) {
+    "alarm" -> VibrationAttributes.USAGE_ALARM
+    "notification" -> VibrationAttributes.USAGE_NOTIFICATION
+    "media" -> VibrationAttributes.USAGE_MEDIA
+    else -> VibrationAttributes.USAGE_TOUCH
   }
 
   /** What a request was turned into: the effect, the tier it plays at and everything that changed. */

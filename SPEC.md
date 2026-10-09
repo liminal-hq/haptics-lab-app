@@ -91,6 +91,12 @@ export type Capabilities = {
 - `play(req: EffectRequest): Promise<PlayResult>` — resolves with the `tier` that played (4 envelope, 3 composition, 2 amplitude, 1 on/off, 0 nothing), `target: 'phone'`, `estimatedMs`, `downgraded` and a one-sentence `reason` (several are joined with `·`); `downgradeReason` is a deprecated alias. Invalid input rejects with `INVALID_EFFECT`; hardware limits never reject, and a device with no vibrator resolves at tier 0. Unknown predefined ids are rejected (`thud` and `pop` are not predefined effects; use the `thud` primitive). Compositions are primitives only: a primitive the motor lacks is swapped for its nearest neighbour (`low_tick → tick → click`, `tick → click`, `thud → click`, `spin → quick_rise`, `slow_rise → quick_rise`), dropped when it has none, and each change is reported in `reason`.
 - `stop(): Promise<void>`
 
+### System touch-feedback setting and usage
+
+- The system touch-feedback setting only gates `usage: 'touch'` (and the UI lane). `respectSystemSettings` defaults to `usage === 'touch'`, so `media`, `notification` and `alarm` haptics still play when touch feedback is off. A request can set `respectSystemSettings` explicitly to override this, and the `respectSystemHapticsSetting` config key now means "respect it for touch usage". When it silences a request, `play()` resolves at tier 0 with `reason: "Touch feedback is off in system settings"`.
+- On Android 13 (API 33) and later the usage is sent as `VibrationAttributes` (`USAGE_TOUCH`, `USAGE_NOTIFICATION`, `USAGE_ALARM`, `USAGE_MEDIA`); older releases use the nearest `AudioAttributes` usage.
+- `allowRepeatingWaveforms` stays off by default in the lab's `tauri.conf.json`; a repeating waveform plays once and `reason` says the repeat was ignored.
+
 ## Material You Theming Approach
 
 The UI uses Material UI (MUI) and integrates with Android's Material You dynamic colours.
