@@ -20,7 +20,7 @@ jobs:
     name: Build debug APK (arm64)
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/liminal-hq/tauri-ci-mobile:latest
+      image: ghcr.io/liminal-hq/tauri-ci-mobile:20261009-2d6e4fc@sha256:6b6b1a2046b207d2004f01099bd4f8a87c4545c7e657292d2a7cb079df4d824a
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}

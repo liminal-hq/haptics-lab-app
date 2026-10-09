@@ -134,7 +134,7 @@ Native and webview output share one `tauri-plugin-log` stream, configured in `sr
 
 ## CI and Android Builds
 
-CI follows the Liminal HQ house pipeline and runs in the shared images (`ghcr.io/liminal-hq/tauri-ci-desktop` and `tauri-ci-mobile`), which keep `RUSTUP_HOME` and `CARGO_HOME` under `/usr/local` so `cargo` works in GitHub container jobs.
+CI follows the Liminal HQ house pipeline and runs in the shared images (`ghcr.io/liminal-hq/tauri-ci-desktop` and `tauri-ci-mobile`), which keep `RUSTUP_HOME` and `CARGO_HOME` under `/usr/local` so `cargo` works in GitHub container jobs. The workflows pin each image by tag and digest rather than `:latest`; to move to a newer image, copy its digest from `docs/reference/recommended-image-pins.md` in `liminal-hq/.github` into every workflow that uses it, and keep `packageManager` in step with the image's Bun.
 
 - **`ci.yml`** runs lint, typecheck, tests, `cargo fmt`, `cargo clippy` and `cargo test` on every PR and push to `main`.
 - **`android.yml`** compiles a release build on every PR and uploads the unsigned APK. It proves the Android build works; the file cannot be installed as is.
