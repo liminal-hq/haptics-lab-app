@@ -79,6 +79,12 @@ describe('rolesFromPalettes', () => {
 		expect(roles.attention).toBe(fallbackRoles.attention);
 	});
 
+	it('keeps every surface on the fallback when the system tones are incomplete', () => {
+		const roles = rolesFromPalettes({ system_neutral1: { '900': '#FF101010' } });
+		expect(roles.surface).toBe(fallbackRoles.surface);
+		expect(roles.surfaceContainerHigh).toBe(fallbackRoles.surfaceContainerHigh);
+	});
+
 	it('returns the fallback roles when there is no palette', () => {
 		expect(rolesFromPalettes(undefined)).toEqual(fallbackRoles);
 		expect(rolesFromPalettes({})).toEqual(fallbackRoles);

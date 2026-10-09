@@ -111,10 +111,11 @@ export function rolesFromPalettes(palettes: MaterialYouPalettes | undefined): Ro
 	const n2 = palettes?.system_neutral2;
 	const f = fallbackRoles;
 
-	const surface = pick(n1, 900, f.surface);
-	const high = pick(n1, 800, f.surfaceContainerHigh);
-	// The in-between surfaces are blended from the system tones, so without them keep the fallback.
+	// The surface levels are blended from two system tones, so use them together or not at all;
+	// mixing one system tone with fallback levels would leave the surfaces mismatched.
 	const haveSurfaces = toHex(n1?.['900']) !== undefined && toHex(n1?.['800']) !== undefined;
+	const surface = haveSurfaces ? pick(n1, 900, f.surface) : f.surface;
+	const high = haveSurfaces ? pick(n1, 800, f.surfaceContainerHigh) : f.surfaceContainerHigh;
 
 	return {
 		...f,
