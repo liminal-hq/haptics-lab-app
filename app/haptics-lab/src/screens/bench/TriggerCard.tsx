@@ -147,8 +147,9 @@ export default function TriggerCard(props: Props) {
 						sx={{
 							m: 0,
 							p: 1.5,
-							maxHeight: 220,
-							overflow: 'auto',
+							overflowX: 'auto',
+							overflowY: 'hidden',
+							touchAction: 'pan-x pan-y',
 							borderRadius: '8px',
 							bgcolor: 'container.lowest',
 							fontFamily: monoFont,

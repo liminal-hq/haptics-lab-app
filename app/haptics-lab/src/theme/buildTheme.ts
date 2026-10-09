@@ -77,7 +77,19 @@ export function buildTheme(roles: Roles): Theme {
 			},
 			MuiChip: { styleOverrides: { root: { borderRadius: 8, fontWeight: 500 } } },
 			MuiPaper: { styleOverrides: { root: { backgroundImage: 'none' } } },
-			MuiSlider: { styleOverrides: { root: { height: 6 } } },
+			// MUI blocks page scrolling for any touch on a slider and jumps the value to wherever the
+			// finger lands, so a swipe that happens to start on a slider moved it. Only the thumb takes
+			// touches now (with a generous hit area); a touch anywhere else on the slider scrolls the page.
+			MuiSlider: {
+				styleOverrides: {
+					root: { height: 6, pointerEvents: 'none', touchAction: 'pan-y' },
+					thumb: {
+						pointerEvents: 'auto',
+						touchAction: 'none',
+						'&::after': { inset: -14 },
+					},
+				},
+			},
 		},
 	});
 }

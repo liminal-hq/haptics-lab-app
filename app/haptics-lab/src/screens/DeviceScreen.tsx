@@ -273,6 +273,8 @@ export default function DeviceScreen() {
 							mt: 1,
 							p: 1.5,
 							overflowX: 'auto',
+							overflowY: 'hidden',
+							touchAction: 'pan-x pan-y',
 							borderRadius: '8px',
 							bgcolor: 'container.lowest',
 							fontFamily: monoFont,
