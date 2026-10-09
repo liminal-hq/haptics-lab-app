@@ -4,9 +4,13 @@ use std::collections::BTreeMap;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EffectRequest {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub usage: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub respect_system_settings: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub stop_before_play: Option<bool>,
     pub effect: Effect,
 }
@@ -20,11 +24,14 @@ pub struct EffectRequest {
 pub enum Effect {
     Oneshot {
         duration_ms: u64,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
         amplitude: Option<u16>,
     },
     Waveform {
         timings_ms: Vec<u64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
         amplitudes: Option<Vec<u16>>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
         repeat: Option<i32>,
     },
     Predefined {
@@ -34,6 +41,7 @@ pub enum Effect {
         steps: Vec<CompositionStep>,
     },
     EnvelopeWaveform {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
         initial_frequency_hz: Option<f32>,
         control_points: Vec<EnvelopePoint>,
     },
@@ -56,7 +64,9 @@ pub struct EnvelopePoint {
 pub enum CompositionStep {
     Primitive {
         primitive: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
         scale: Option<f32>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
         delay_ms: Option<u64>,
     },
 }
@@ -430,5 +440,32 @@ mod tests {
             }
         });
         assert!(serde_json::from_value::<EffectRequest>(raw).is_err());
+    }
+
+    #[test]
+    fn unset_request_fields_are_left_out_not_sent_as_null() {
+        // Kotlin treats a present key as set, so a null would read as "false" or fail to parse.
+        let req: EffectRequest = serde_json::from_value(serde_json::json!({
+            "effect": {
+                "type": "composition",
+                "steps": [{ "kind": "primitive", "primitive": "click" }]
+            }
+        }))
+        .expect("deserialize request");
+        let value = serde_json::to_value(req).expect("serialize request");
+        for key in ["id", "usage", "respectSystemSettings", "stopBeforePlay"] {
+            assert!(value.get(key).is_none(), "{key} should be absent");
+        }
+        let step = &value["effect"]["steps"][0];
+        assert!(step.get("scale").is_none());
+        assert!(step.get("delayMs").is_none());
+
+        let wave: EffectRequest = serde_json::from_value(serde_json::json!({
+            "effect": { "type": "waveform", "timingsMs": [0, 20] }
+        }))
+        .expect("deserialize waveform");
+        let wave = serde_json::to_value(wave).expect("serialize waveform");
+        assert!(wave["effect"].get("amplitudes").is_none());
+        assert!(wave["effect"].get("repeat").is_none());
     }
 }

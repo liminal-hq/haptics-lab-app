@@ -50,6 +50,9 @@ private val PRIMITIVE_IDS = listOf("tick", "low_tick", "click", "thud", "spin", 
 
 private val EFFECT_IDS = listOf("click", "double_click", "tick", "heavy_click")
 
+/** A key that is set to a real value; Tauri's `has` is also true for an explicit `null`. */
+private fun JSObject.present(key: String): Boolean = has(key) && !isNull(key)
+
 // Built-in durations used when the motor does not report its own (milliseconds).
 private val PRIMITIVE_MS = mapOf(
   "tick" to 10, "low_tick" to 12, "click" to 15, "thud" to 30,
@@ -219,7 +222,7 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
     }
 
     // honour system setting if configured
-    val respect = if (args.has("respectSystemSettings")) {
+    val respect = if (args.present("respectSystemSettings")) {
       args.getBoolean("respectSystemSettings")
     } else {
       cfg.respectSystemHapticsSetting ?: true
@@ -234,7 +237,7 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
       return
     }
 
-    val stopBefore = if (args.has("stopBeforePlay")) {
+    val stopBefore = if (args.present("stopBeforePlay")) {
       args.getBoolean("stopBeforePlay")
     } else {
       cfg.stopBeforePlay ?: true
@@ -301,7 +304,7 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
     return when (type) {
       "oneshot" -> {
         val dur = getLong(effectObj, "durationMs", "duration_ms").coerceAtMost(maxDur)
-        val ampRaw = if (effectObj.has("amplitude")) effectObj.getInt("amplitude") else -1
+        val ampRaw = if (effectObj.present("amplitude")) effectObj.getInt("amplitude") else -1
         val amp = if (ampRaw <= 0) VibrationEffect.DEFAULT_AMPLITUDE else ampRaw.coerceIn(1, maxAmp)
         val hasAmplitude = vibrator.hasAmplitudeControl()
         val reasons = if (!hasAmplitude && ampRaw > 0) {
@@ -312,7 +315,7 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
 
       "waveform" -> {
         val timings = toLongArray(getArray(effectObj, "timingsMs", "timings_ms"))
-        val repeat = if (effectObj.has("repeat")) effectObj.getInt("repeat") else -1
+        val repeat = if (effectObj.present("repeat")) effectObj.getInt("repeat") else -1
 
         // Enforce repeat safety, and say so
         val allowRepeat = cfg.allowRepeatingWaveforms ?: false
@@ -330,7 +333,7 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
         val total = capped.sum()
         val hasAmplitude = vibrator.hasAmplitudeControl()
 
-        if (effectObj.has("amplitudes")) {
+        if (effectObj.present("amplitudes")) {
           val amps = toIntArray(getArray(effectObj, "amplitudes", "amplitudes_ms")).map { it.coerceIn(0, maxAmp) }.toIntArray()
           if (amps.size != capped.size) {
             throw IllegalArgumentException("amplitudes must have same length as timingsMs")
@@ -421,8 +424,8 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
       if (requested !in PRIMITIVE_IDS) {
         throw IllegalArgumentException("steps[$i]: unknown primitive `$requested`")
       }
-      val delay = if (step.has("delayMs")) step.getLong("delayMs").toInt().coerceAtLeast(0) else 0
-      val scale = if (step.has("scale")) step.getDouble("scale").toFloat().coerceIn(0f, 1f) else 1f
+      val delay = if (step.present("delayMs")) step.getLong("delayMs").toInt().coerceAtLeast(0) else 0
+      val scale = if (step.present("scale")) step.getDouble("scale").toFloat().coerceIn(0f, 1f) else 1f
 
       var id: String? = requested
       if (support[requested]?.first != true) {
@@ -510,8 +513,8 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
 
     val builder = VibrationEffect.WaveformEnvelopeBuilder()
     val initial = when {
-      effectObj.has("initialFrequencyHz") -> effectObj.getDouble("initialFrequencyHz")
-      effectObj.has("initial_frequency_hz") -> effectObj.getDouble("initial_frequency_hz")
+      effectObj.present("initialFrequencyHz") -> effectObj.getDouble("initialFrequencyHz")
+      effectObj.present("initial_frequency_hz") -> effectObj.getDouble("initial_frequency_hz")
       else -> null
     }
     if (initial != null) {
@@ -521,7 +524,7 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
     var total = 0L
     for (i in 0 until points.length()) {
       val p = getObject(points, i)
-      if (!p.has("amplitude")) throw IllegalArgumentException("controlPoints[$i]: missing amplitude")
+      if (!p.present("amplitude")) throw IllegalArgumentException("controlPoints[$i]: missing amplitude")
       val amplitude = p.getDouble("amplitude").toFloat()
       if (amplitude.isNaN() || amplitude < 0f || amplitude > 1f) {
         throw IllegalArgumentException("controlPoints[$i]: amplitude must be within 0..1")
