@@ -5,12 +5,12 @@
 
 import type { Capabilities, EnvelopeWaveform } from '@liminal-hq/plugin-haptics';
 
-export type EnvelopeRow = { amplitude: string; frequencyHz: string; durationMs: string };
+export type EnvelopeRow = { amplitude: number; frequencyHz: number; durationMs: number };
 
 export const defaultEnvelopeRows = (): EnvelopeRow[] => [
-	{ amplitude: '0.2', frequencyHz: '150', durationMs: '100' },
-	{ amplitude: '1', frequencyHz: '200', durationMs: '200' },
-	{ amplitude: '0', frequencyHz: '150', durationMs: '100' },
+	{ amplitude: 0.2, frequencyHz: 150, durationMs: 100 },
+	{ amplitude: 1, frequencyHz: 200, durationMs: 200 },
+	{ amplitude: 0, frequencyHz: 150, durationMs: 100 },
 ];
 
 export type EnvelopeBuildResult =
@@ -20,7 +20,7 @@ export type EnvelopeBuildResult =
 /** Converts editor rows to a payload, validating against reported device limits when known. */
 export function buildEnvelope(
 	rows: EnvelopeRow[],
-	initialFrequencyHz: string,
+	initialFrequencyHz: number | null,
 	info?: Capabilities['envelopeInfo'],
 ): EnvelopeBuildResult {
 	const errors: string[] = [];
@@ -40,10 +40,8 @@ export function buildEnvelope(
 	let total = 0;
 	const controlPoints = rows.map((r, i) => {
 		const label = `Point ${i + 1}`;
-		const amplitude = Number(r.amplitude);
-		const frequencyHz = Number(r.frequencyHz);
-		const durationMs = Number(r.durationMs);
-		if (r.amplitude.trim() === '' || !(amplitude >= 0 && amplitude <= 1)) {
+		const { amplitude, frequencyHz, durationMs } = r;
+		if (!(amplitude >= 0 && amplitude <= 1)) {
 			errors.push(`${label}: amplitude must be within 0–1`);
 		}
 		checkFreq(frequencyHz, label);
@@ -66,8 +64,8 @@ export function buildEnvelope(
 	}
 
 	let initial: number | undefined;
-	if (initialFrequencyHz.trim() !== '') {
-		initial = Number(initialFrequencyHz);
+	if (initialFrequencyHz !== null) {
+		initial = initialFrequencyHz;
 		checkFreq(initial, 'Initial frequency');
 	}
 

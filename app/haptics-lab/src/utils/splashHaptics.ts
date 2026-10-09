@@ -33,15 +33,15 @@ export function splashWaveform(): Waveform {
 /** The same shape as an envelope: amplitude 0–1 with the frequency swinging between two values. */
 function splashEnvelopeRows(): EnvelopeRow[] {
 	return SHAKE_AMPLITUDES.map((amplitude, i) => ({
-		amplitude: (amplitude / 255).toFixed(2),
-		frequencyHz: i % 2 === 0 ? '180' : '140',
-		durationMs: String(SEGMENT_MS),
+		amplitude: Number((amplitude / 255).toFixed(2)),
+		frequencyHz: i % 2 === 0 ? 180 : 140,
+		durationMs: SEGMENT_MS,
 	}));
 }
 
 /** Envelope for the splash, or null when the device's limits do not allow it. */
 export function splashEnvelope(info: Capabilities['envelopeInfo']): EnvelopeWaveform | null {
-	const built = buildEnvelope(splashEnvelopeRows(), '', info);
+	const built = buildEnvelope(splashEnvelopeRows(), null, info);
 	return built.ok ? built.effect : null;
 }
 
