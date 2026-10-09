@@ -144,28 +144,36 @@ function applyCaps(
 	return { segs: out, cut };
 }
 
-/** Waveform timings that alternate off/on from `origin`; `amplitudes` is omitted for on/off. */
+/**
+ * Waveform timings that alternate off/on from `origin`; `amplitudes` is omitted for on/off. Native
+ * takes whole milliseconds, so every timing is rounded, and the result is clipped to `maxMs` after
+ * overlapping segments have been moved later. `end` is when the waveform stops, on the pattern clock.
+ */
 function waveformRequest(
 	segs: Segment[],
 	origin: number,
 	withAmplitudes: boolean,
 	base: RequestBase,
-): EffectRequest {
+	maxMs: number,
+): { request: EffectRequest; end: number } {
 	const timingsMs: number[] = [];
 	const amplitudes: number[] = [];
-	let cursor = origin;
+	let cursor = Math.round(origin);
 	for (const s of segs) {
-		const start = Math.max(s.at, cursor);
-		timingsMs.push(start - cursor, s.dur);
+		const start = Math.max(round(s.at), cursor);
+		if (start >= maxMs) break;
+		const dur = Math.min(Math.max(1, round(s.dur)), maxMs - start);
+		timingsMs.push(start - cursor, dur);
 		amplitudes.push(0, s.amp);
-		cursor = start + s.dur;
+		cursor = start + dur;
 	}
-	return {
+	const request: EffectRequest = {
 		...base,
 		effect: withAmplitudes
 			? { type: 'waveform', timingsMs, amplitudes, repeat: -1 }
 			: { type: 'waveform', timingsMs, repeat: -1 },
 	};
+	return { request, end: cursor };
 }
 
 type RequestBase = Pick<EffectRequest, 'id' | 'usage' | 'respectSystemSettings'>;
@@ -218,7 +226,9 @@ function compileEnvelope(cx: Context): Attempt | { fallback: string } {
 	let raised = false;
 	let serialised = false;
 
-	const push = (amplitude: number, frequencyHz: number, durationMs: number) => {
+	const push = (amplitude: number, frequencyHz: number, wanted: number) => {
+		// Native takes whole milliseconds.
+		const durationMs = Math.max(1, Math.round(wanted));
 		let remaining = durationMs;
 		const from = lastAmp;
 		const total = durationMs;
@@ -257,13 +267,16 @@ function compileEnvelope(cx: Context): Attempt | { fallback: string } {
 				a: clamp01(levelAt(ev.intensity, x) * cx.scale),
 				f: freqFor(levelAt(ev.sharpness, x)),
 			});
+			// The lead point to the first curve value comes out of the first segment, so the event
+			// keeps its own length and the next event is not pushed later.
 			const first = at(0);
 			push(first.a, first.f, minPt);
 			for (let k = 1; k < ts.length; k++) {
 				const p = at(ts[k]);
-				push(p.a, p.f, (ts[k] - ts[k - 1]) * ev.duration);
+				let wanted = (ts[k] - ts[k - 1]) * ev.duration;
+				if (k === 1) wanted = Math.max(minPt, wanted - minPt);
+				push(p.a, p.f, wanted);
 			}
-			if (lastAmp > 0) push(0, lastFreq, minPt);
 		}
 	}
 	if (lastAmp > 0) push(0, lastFreq, minPt);
@@ -378,10 +391,14 @@ function compilePrimitives(cx: Context): Attempt {
 		steps.push({ atMs: 0, request });
 	} else {
 		notes.push('Mixed: runs as a scheduled step list');
+		// Each step cancels the one before it, so steps start after the previous one ends.
+		let end = 0;
 		for (const item of items) {
 			if (item.kind === 'primitive') {
+				const start = Math.max(round(item.ev.at), end);
+				if (start >= cx.maxMs) continue;
 				steps.push({
-					atMs: round(item.ev.at),
+					atMs: start,
 					request: {
 						...cx.base,
 						effect: {
@@ -390,12 +407,13 @@ function compilePrimitives(cx: Context): Attempt {
 						},
 					},
 				});
+				end = start + primitiveMs(cx.caps, item.id);
 			} else if (item.segs.length) {
-				const origin = item.segs[0].at;
-				steps.push({
-					atMs: round(origin),
-					request: waveformRequest(item.segs, origin, true, cx.base),
-				});
+				const origin = Math.max(round(item.segs[0].at), end);
+				const built = waveformRequest(item.segs, origin, true, cx.base, cx.maxMs);
+				if (built.end <= origin) continue;
+				steps.push({ atMs: origin, request: built.request });
+				end = built.end;
 			}
 		}
 	}
@@ -423,7 +441,7 @@ function compileAmplitude(cx: Context, given?: Segment[]): Attempt {
 	if (cut) notes.push(`Truncated to ${cx.maxMs} ms`);
 	notes.push(`${segs.length} one-shot segments, neighbours within ${MERGE_WITHIN} merged`);
 
-	const request = segs.length ? waveformRequest(segs, 0, true, cx.base) : null;
+	const request = segs.length ? waveformRequest(segs, 0, true, cx.base, cx.maxMs).request : null;
 	const segments = toSegmentReport(segs, 2);
 	return {
 		tier: 2,
@@ -454,7 +472,7 @@ function compileOnOff(cx: Context): Attempt {
 		}
 		const onTime = Math.max(MIN_ON_MS, (s.amp / 255) * DUTY_PERIOD_MS);
 		for (let x = 0; x < s.dur; x += DUTY_PERIOD_MS) {
-			on.push({ at: s.at + x, dur: Math.max(MIN_ON_MS, Math.min(onTime, s.dur - x)), amp: 255 });
+			on.push({ at: s.at + x, dur: Math.min(s.dur - x, Math.max(MIN_ON_MS, onTime)), amp: 255 });
 		}
 	}
 	notes.push(`Duty-cycled on a ${DUTY_PERIOD_MS} ms period, minimum on-time ${MIN_ON_MS} ms`);
@@ -465,7 +483,7 @@ function compileOnOff(cx: Context): Attempt {
 	}
 	notes.push(...quiet.notes.filter((n) => n.startsWith('Truncated')));
 
-	const request = on.length ? waveformRequest(on, 0, false, cx.base) : null;
+	const request = on.length ? waveformRequest(on, 0, false, cx.base, cx.maxMs).request : null;
 	const segments = toSegmentReport(on, 1);
 	return {
 		tier: 1,
@@ -517,7 +535,7 @@ export function compilePattern(
 		pattern,
 		caps,
 		events: sortEvents(pattern.events),
-		scale: clamp01(opts.scale ?? 1),
+		scale: clamp01(Number.isFinite(opts.scale) ? (opts.scale as number) : 1),
 		maxMs: caps.limits.maxDurationMs,
 		maxAmp: Math.min(255, caps.limits.maxAmplitude),
 		base,

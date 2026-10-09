@@ -33,6 +33,109 @@ describe('golden reports', () => {
 	}
 });
 
+/** Every duration, delay and step time that reaches native must be a whole number. */
+function wholeNumbers(report: ReturnType<typeof compilePattern>): boolean {
+	const ints = (xs: number[]) => xs.every(Number.isInteger);
+	return report.steps.every((step) => {
+		const e = step.request.effect;
+		if (!Number.isInteger(step.atMs)) return false;
+		if (e.type === 'waveform') return ints(e.timingsMs);
+		if (e.type === 'composition') return ints(e.steps.map((c) => c.delayMs ?? 0));
+		if (e.type === 'envelopeWaveform') return ints(e.controlPoints.map((p) => p.durationMs));
+		return true;
+	});
+}
+
+describe('whole milliseconds', () => {
+	for (const [cueName, pattern] of Object.entries(seedCues)) {
+		for (const [deviceName, caps] of Object.entries(fixtures)) {
+			for (const tier of tiers) {
+				if (tier > caps.topTier) continue;
+				it(`${cueName} on ${deviceName} at tier ${tier} sends whole numbers`, () => {
+					expect(wholeNumbers(compilePattern(pattern, caps, { tier }))).toBe(true);
+				});
+			}
+		}
+	}
+
+	it('rounds fractional event times and durations', () => {
+		const fractional: Pattern = {
+			format: PATTERN_FORMAT,
+			events: [
+				{ type: 'continuous', at: 10.4, duration: 125.7, intensity: 0.6, sharpness: 0.5 },
+				{ type: 'transient', at: 200.2, intensity: 0.8, sharpness: 0.8 },
+			],
+		};
+		for (const [, caps] of Object.entries(fixtures)) {
+			expect(wholeNumbers(compilePattern(fractional, caps))).toBe(true);
+		}
+	});
+});
+
+describe('envelope timing', () => {
+	it('keeps a hum to its own length so the next event is not pushed later', () => {
+		const back: Pattern = {
+			format: PATTERN_FORMAT,
+			events: [
+				{ type: 'continuous', at: 0, duration: 200, intensity: 0.6, sharpness: 0.5 },
+				{ type: 'transient', at: 200, intensity: 0.8, sharpness: 0.8 },
+			],
+		};
+		const r = compilePattern(back, envelopeDevice);
+		expect(r.tier).toBe(4);
+		expect(r.notes.some((n) => n.startsWith('Overlapping'))).toBe(false);
+		const first = r.segments.find((s) => s.atMs >= 200 && s.amplitude > 0.7);
+		expect(first?.atMs).toBe(200);
+	});
+});
+
+describe('mixed patterns', () => {
+	it('starts each step after the previous one ends', () => {
+		const caps = {
+			...midRange,
+			primitives: {
+				...midRange.primitives,
+				spin: { supported: false, durationMs: null },
+				quick_rise: { supported: false, durationMs: null },
+			},
+		};
+		const overlap: Pattern = {
+			format: PATTERN_FORMAT,
+			events: [
+				{ type: 'continuous', at: 0, duration: 120, intensity: 0.6, sharpness: 0.5 },
+				{ type: 'transient', at: 50, intensity: 0.8, sharpness: 0.8 },
+			],
+		};
+		const r = compilePattern(overlap, caps);
+		expect(r.mixed).toBe(true);
+		expect(r.steps.map((s) => s.atMs)).toEqual([0, 120]);
+	});
+});
+
+describe('limits after serialisation', () => {
+	it('clips overlapping segments to the duration cap', () => {
+		const dense: Pattern = {
+			format: PATTERN_FORMAT,
+			events: Array.from({ length: 20 }, () => ({
+				type: 'continuous' as const,
+				at: 0,
+				duration: 40,
+				intensity: 0.5,
+				sharpness: 0.5,
+			})),
+		};
+		const caps = { ...pixel8Pro, limits: { ...pixel8Pro.limits, maxDurationMs: 200 } };
+		const effect = compilePattern(dense, caps, { tier: 2 }).request?.effect;
+		const total = effect?.type === 'waveform' ? effect.timingsMs.reduce((a, b) => a + b, 0) : 0;
+		expect(total).toBeLessThanOrEqual(200);
+	});
+
+	it('treats a non-finite scale as full strength', () => {
+		const r = compilePattern(click, pixel8Pro, { scale: Number.NaN });
+		expect(r.request?.effect).toMatchObject({ steps: [{ scale: 0.8 }] });
+	});
+});
+
 const click: Pattern = {
 	format: PATTERN_FORMAT,
 	events: [{ type: 'transient', at: 0, intensity: 0.8, sharpness: 0.8 }],
