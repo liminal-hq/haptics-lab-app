@@ -39,3 +39,45 @@ impl Haptics {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn haptics() -> Haptics {
+        Haptics::new(Config::default())
+    }
+
+    #[test]
+    fn play_resolves_at_tier_zero_with_a_reason() {
+        let req: EffectRequest = serde_json::from_value(serde_json::json!({
+            "effect": { "type": "predefined", "effectId": "click" }
+        }))
+        .expect("deserialize request");
+
+        let res = haptics().play(req).expect("play resolves");
+        assert_eq!(res.tier, 0);
+        assert!(res.downgraded);
+        assert_eq!(res.reason.as_deref(), Some("No vibrator on this platform"));
+    }
+
+    #[test]
+    fn play_steps_and_ui_resolve_at_tier_zero() {
+        let steps = haptics()
+            .play_steps(Vec::new())
+            .expect("play_steps resolves");
+        assert_eq!(steps.tier, 0);
+
+        let ui = haptics().ui(UiKind::Confirm).expect("ui resolves");
+        assert_eq!(ui.tier, 0);
+        assert_eq!(ui.reason.as_deref(), Some("No vibrator on this platform"));
+    }
+
+    #[test]
+    fn capabilities_take_their_limits_from_the_config() {
+        let caps = haptics().capabilities().expect("capabilities");
+        assert_eq!(caps.platform, "desktop");
+        assert_eq!(caps.limits.max_duration_ms, 10_000);
+        assert!(!caps.limits.allow_repeating_waveforms);
+    }
+}

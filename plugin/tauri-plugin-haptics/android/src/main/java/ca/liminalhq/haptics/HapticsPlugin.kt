@@ -51,6 +51,8 @@ internal class EffectRequestArgs {
   lateinit var effect: JSObject
 }
 
+private val USAGES = setOf("touch", "notification", "alarm", "media")
+
 private val PRIMITIVE_IDS = listOf("tick", "low_tick", "click", "thud", "spin", "quick_rise", "slow_rise")
 
 private val EFFECT_IDS = listOf("click", "double_click", "tick", "heavy_click")
@@ -90,6 +92,7 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
   private var webView: WebView? = null
   private val stepHandler = Handler(Looper.getMainLooper())
   private val stepToken = Any()
+  @Volatile private var stepGeneration = 0
 
   override fun load(webView: WebView) {
     this.webView = webView
@@ -227,10 +230,10 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
    */
   @Command
   fun ui(invoke: Invoke) {
-    val kind = invoke.getArgs().getString("kind")
+    val kind = invoke.getArgs().optString("kind", "")
     val choice = uiFeedback(kind)
     if (choice == null) {
-      invoke.reject("INVALID_EFFECT", "Unknown UI feedback kind: $kind")
+      invoke.reject("Unknown UI feedback kind: $kind", "INVALID_EFFECT")
       return
     }
 
@@ -280,7 +283,7 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
   @Command
   fun stop(invoke: Invoke) {
     cancelScheduled()
-    vibrator.cancel()
+    if (vibrator.hasVibrator()) vibrator.cancel()
     invoke.resolve(JSObject())
   }
 
@@ -292,16 +295,18 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
     val prepared = try {
       prepare(args)
     } catch (e: Throwable) {
-      invoke.reject("INVALID_EFFECT", e.message ?: "Invalid haptics request")
+      invoke.reject(e.message ?: "Invalid haptics request", "INVALID_EFFECT")
       return
     }
 
     when (prepared) {
       is Prepared.Silent -> invoke.resolve(playResult(0, 0, prepared.reasons))
       is Prepared.Ready -> {
-        cancelScheduled()
-        if (prepared.stopBefore) vibrator.cancel()
-        vibrate(prepared.built.effect, prepared.usage)
+        if (prepared.stopBefore) {
+          cancelScheduled()
+          vibrator.cancel()
+        }
+        vibrate(prepared.built.effect!!, prepared.usage)
         invoke.resolve(playResult(prepared.built.tier, prepared.built.estimatedMs, prepared.built.reasons))
       }
     }
@@ -315,14 +320,15 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
   fun play_steps(invoke: Invoke) {
     val steps = getArray(invoke.getArgs(), "steps")
     if (steps.length() == 0) {
-      invoke.reject("INVALID_EFFECT", "steps cannot be empty")
+      invoke.reject("steps cannot be empty", "INVALID_EFFECT")
       return
     }
     if (steps.length() > MAX_STEPS) {
-      invoke.reject("INVALID_EFFECT", "steps exceeds the maximum of $MAX_STEPS")
+      invoke.reject("steps exceeds the maximum of $MAX_STEPS", "INVALID_EFFECT")
       return
     }
 
+    val maxDur = (cfg.maxDurationMs ?: 10_000).coerceAtLeast(1)
     val ready = mutableListOf<Pair<Long, Prepared.Ready>>()
     val reasons = linkedSetOf<String>()
     var tier = 0
@@ -333,6 +339,9 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
         if (!step.has("atMs")) throw IllegalArgumentException("steps[$i]: missing field `atMs`")
         val atMs = step.getLong("atMs")
         if (atMs < 0) throw IllegalArgumentException("steps[$i]: atMs must not be negative")
+        if (atMs > maxDur) {
+          throw IllegalArgumentException("steps[$i]: atMs $atMs exceeds the limit of $maxDur ms")
+        }
         val request = step.getJSObject("request")
           ?: throw IllegalArgumentException("steps[$i]: missing field `request`")
         val prepared = try {
@@ -351,20 +360,33 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
         }
       }
     } catch (e: Throwable) {
-      invoke.reject("INVALID_EFFECT", e.message ?: "Invalid haptics request")
+      invoke.reject(e.message ?: "Invalid haptics request", "INVALID_EFFECT")
       return
     }
 
-    cancelScheduled()
-    vibrator.cancel()
-    val start = SystemClock.uptimeMillis()
-    for ((atMs, step) in ready) {
-      stepHandler.postAtTime({ vibrate(step.built.effect, step.usage) }, stepToken, start + atMs)
+    if (ready.isNotEmpty()) {
+      cancelScheduled()
+      vibrator.cancel()
+      val generation = stepGeneration
+      val start = SystemClock.uptimeMillis()
+      for ((atMs, step) in ready) {
+        stepHandler.postAtTime({
+          // Superseded by a stop or a newer call, or the OS refused the effect: stay quiet.
+          if (generation == stepGeneration) {
+            runCatching { vibrate(step.built.effect!!, step.usage) }
+          }
+        }, stepToken, start + atMs)
+      }
     }
     invoke.resolve(playResult(tier, end, reasons.toList()))
   }
 
+  /**
+   * Cancels pending steps. The generation moves on first, so a step runnable that is already
+   * executing on the main thread sees it has been superseded and does not vibrate after the stop.
+   */
   private fun cancelScheduled() {
+    stepGeneration++
     stepHandler.removeCallbacksAndMessages(stepToken)
   }
 
@@ -379,7 +401,8 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
   private fun prepare(args: JSObject): Prepared {
     val effectObj = args.getJSObject("effect") ?: throw IllegalArgumentException("Missing effect payload")
 
-    val usage = (args.getString("usage", cfg.defaultUsage ?: "touch") ?: "touch").lowercase()
+    val requested = (args.getString("usage", cfg.defaultUsage ?: "touch") ?: "touch").lowercase()
+    val usage = if (requested in USAGES) requested else "touch"
 
     // The touch-feedback setting gates touch-usage haptics only, so a media or alarm rumble is not
     // muted by it. An explicit `respectSystemSettings` on the request still wins.
@@ -405,7 +428,10 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
     val maxAmp = (cfg.maxAmplitude ?: 255).coerceIn(1, 255)
     val maxDur = (cfg.maxDurationMs ?: 10_000).coerceAtLeast(1)
 
-    return Prepared.Ready(buildEffect(effectObj, vibrator, maxAmp, maxDur, cfg), usage, stopBefore)
+    val built = buildEffect(effectObj, vibrator, maxAmp, maxDur, cfg)
+    // A request the device cannot play resolves at tier 0 with the reason, never silently.
+    if (built.effect == null) return Prepared.Silent(built.reasons)
+    return Prepared.Ready(built, usage, stopBefore)
   }
 
   /**
@@ -434,7 +460,7 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
 
   /** What a request was turned into: the effect, the tier it plays at and everything that changed. */
   private class Built(
-    val effect: VibrationEffect,
+    val effect: VibrationEffect?,
     val tier: Int,
     val estimatedMs: Long,
     val reasons: List<String> = emptyList(),
@@ -467,13 +493,20 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
 
     return when (type) {
       "oneshot" -> {
-        val dur = getLong(effectObj, "durationMs", "duration_ms").coerceAtMost(maxDur)
+        val requestedDur = getLong(effectObj, "durationMs", "duration_ms")
+        val dur = requestedDur.coerceAtMost(maxDur)
         val ampRaw = if (effectObj.present("amplitude")) effectObj.getInt("amplitude") else -1
-        val amp = if (ampRaw <= 0) VibrationEffect.DEFAULT_AMPLITUDE else ampRaw.coerceIn(1, maxAmp)
         val hasAmplitude = vibrator.hasAmplitudeControl()
-        val reasons = if (!hasAmplitude && ampRaw > 0) {
-          listOf("No amplitude control; played at default strength")
-        } else emptyList()
+        val reasons = mutableListOf<String>()
+        if (dur < requestedDur) reasons.add("Truncated to $maxDur ms")
+        val amp = when {
+          ampRaw <= 0 -> VibrationEffect.DEFAULT_AMPLITUDE
+          !hasAmplitude -> {
+            reasons.add("No amplitude control; played at default strength")
+            VibrationEffect.DEFAULT_AMPLITUDE
+          }
+          else -> ampRaw.coerceIn(1, maxAmp)
+        }
         Built(VibrationEffect.createOneShot(dur, amp), if (hasAmplitude) 2 else 1, dur, reasons)
       }
 
@@ -487,6 +520,7 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
         val reasons = mutableListOf<String>()
         if (safeRepeat != repeat) reasons.add("Repeat ignored: allowRepeatingWaveforms is false")
         val capped = capWaveformDuration(timings, maxDur)
+        if (timings.sum() > maxDur) reasons.add("Truncated to $maxDur ms")
 
         if (capped.isEmpty()) {
           throw IllegalArgumentException("timingsMs cannot be empty")
@@ -523,8 +557,15 @@ class HapticsPlugin(private val activity: Activity) : Plugin(activity) {
               "for a thud use the `thud` composition primitive."
           )
         }
-        val tier = minOf(deviceTopTier(), 3)
-        Built(VibrationEffect.createPredefined(predefinedConstant(id)), tier, PREDEFINED_MS[id] ?: 20L)
+        val support = if (Build.VERSION.SDK_INT >= 30) {
+          runCatching { vibrator.areEffectsSupported(predefinedConstant(id)).firstOrNull() }.getOrNull()
+        } else null
+        if (support == Vibrator.VIBRATION_EFFECT_SUPPORT_NO) {
+          Built(null, 0, 0, listOf("This device does not support the predefined effect `$id`"))
+        } else {
+          val tier = minOf(deviceTopTier(), 3)
+          Built(VibrationEffect.createPredefined(predefinedConstant(id)), tier, PREDEFINED_MS[id] ?: 20L)
+        }
       }
 
       "composition" -> {
